@@ -1,10 +1,12 @@
 using Firmeza.Domain.Entities;
 using Firmeza.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Firmeza.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SaleDetailsController : ControllerBase
