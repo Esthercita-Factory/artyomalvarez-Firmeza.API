@@ -3,7 +3,22 @@ namespace Firmeza.Domain.Entities;
 public class Customer
 {
     public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string Phone { get; set; } = string.Empty;
+
+    public string FirstName { get; set; } = string.Empty;
+
+    public string LastName { get; set; } = string.Empty;
+
+    public string DocumentNumber { get; set; } = string.Empty;
+
+    public string DocumentType { get; set; } = "Cédula";
+
+    public string? Email { get; set; }
+
+    public string? Phone { get; set; }
+
+    public string? Address { get; set; }
+
+    public int? Age { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
