@@ -1,18 +1,18 @@
+using Firmeza.Domain.Common;
+
 namespace Firmeza.Domain.Entities;
 
-public class Customer
+public class Customer : BaseEntity
 {
-    public int Id { get; set; }
-
     public string FirstName { get; set; } = string.Empty;
 
     public string LastName { get; set; } = string.Empty;
 
     public string DocumentNumber { get; set; } = string.Empty;
 
-    public string DocumentType { get; set; } = "Cédula";
+    public string DocumentType { get; set; } = "CC";
 
-    public string? Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 
     public string? Phone { get; set; }
 
@@ -20,5 +20,7 @@ public class Customer
 
     public int? Age { get; set; }
 
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public ICollection<Sale> Sales { get; set; } = new List<Sale>();
+
+    public ICollection<Rental> Rentals { get; set; } = new List<Rental>();
 }

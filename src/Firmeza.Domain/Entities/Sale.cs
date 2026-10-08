@@ -1,13 +1,24 @@
+using Firmeza.Domain.Common;
+
 namespace Firmeza.Domain.Entities;
-public class Sale
+
+public class Sale : BaseEntity
 {
-    public int Id { get; set; }
-    public int CustomerId { get; set; }
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public Guid CustomerId { get; set; }
+
+    public Customer? Customer { get; set; }
+
     public string Status { get; set; } = "Pendiente";
+
     public string? ExternalReference { get; set; }
+
     public decimal Subtotal { get; set; }
+
     public decimal TaxRate { get; set; }
+
     public decimal TaxAmount { get; set; }
+
     public decimal Total { get; set; }
+
+    public ICollection<SaleDetail> Details { get; set; } = new List<SaleDetail>();
 }
