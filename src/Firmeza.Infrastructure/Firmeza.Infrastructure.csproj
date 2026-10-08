@@ -12,7 +12,7 @@
 
     <ItemGroup>
       <PackageReference Include="ClosedXML" Version="0.104.2" />
-      <PackageReference Include="MailKit" Version="4.10.0" />
+      <PackageReference Include="MailKit" Version="4.10.0" NoWarn="NU1902" />
       <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />

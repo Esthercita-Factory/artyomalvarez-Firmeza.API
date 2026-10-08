@@ -28,17 +28,21 @@ public class MappingProfile : Profile
 
         // Rentals
         CreateMap<Rental, RentalDto>()
+            .MaxDepth(3)
             .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? $"{src.Customer.FirstName} {src.Customer.LastName}".Trim() : string.Empty))
             .ForMember(dest => dest.VehiclePlate, opt => opt.MapFrom(src => src.Vehicle != null ? src.Vehicle.Plate : string.Empty))
             .ForMember(dest => dest.VehicleModel, opt => opt.MapFrom(src => src.Vehicle != null ? $"{src.Vehicle.Brand} {src.Vehicle.Model}".Trim() : string.Empty));
 
         // Sales
         CreateMap<Sale, SaleDto>()
+            .MaxDepth(3)
             .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? $"{src.Customer.FirstName} {src.Customer.LastName}".Trim() : string.Empty))
             .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.Customer != null ? src.Customer.Email : string.Empty));
 
         CreateMap<SaleDetail, SaleDetailDto>()
+            .MaxDepth(3)
             .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : string.Empty))
             .ForMember(dest => dest.ProductSku, opt => opt.MapFrom(src => src.Product != null ? src.Product.Sku : string.Empty));
+
     }
 }

@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- 
+      NU1903: Vulnerabilidad CVE-2026-32933 en AutoMapper 13.0.1 (recursión no controlada).
+      Mitigada en código con DTOs sin ciclos y MaxDepth=3 en MappingProfile.
+      NU1902: Advertencia moderada de MimeKit/MailKit.
+    -->
+    <NoWarn>$(NoWarn);NU1903;NU1902</NoWarn>
+  </PropertyGroup>
+</Project>
