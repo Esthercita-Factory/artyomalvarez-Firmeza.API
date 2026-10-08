@@ -19,8 +19,8 @@ public class SaleDetailsController : ControllerBase
     public async Task<ActionResult<IEnumerable<SaleDetail>>> GetAll(CancellationToken ct)
         => Ok(await _db.SaleDetails.AsNoTracking().ToListAsync(ct));
 
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<SaleDetail>> GetById(int id, CancellationToken ct)
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<SaleDetail>> GetById(Guid id, CancellationToken ct)
     {
         var saleDetail = await _db.SaleDetails.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
         return saleDetail is null ? NotFound() : Ok(saleDetail);
@@ -44,8 +44,8 @@ public class SaleDetailsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = saleDetail.Id }, saleDetail);
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] SaleDetail input, CancellationToken ct)
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] SaleDetail input, CancellationToken ct)
     {
         var saleDetail = await _db.SaleDetails.FirstOrDefaultAsync(d => d.Id == id, ct);
         if (saleDetail is null) return NotFound();
@@ -60,8 +60,8 @@ public class SaleDetailsController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var saleDetail = await _db.SaleDetails.FirstOrDefaultAsync(d => d.Id == id, ct);
         if (saleDetail is null) return NotFound();

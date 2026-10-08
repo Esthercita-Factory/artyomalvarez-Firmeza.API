@@ -19,8 +19,8 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<IEnumerable<Product>>> GetAll(CancellationToken ct)
         => Ok(await _db.Products.AsNoTracking().ToListAsync(ct));
 
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<Product>> GetById(int id, CancellationToken ct)
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<Product>> GetById(Guid id, CancellationToken ct)
     {
         var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
         return product is null ? NotFound() : Ok(product);
@@ -49,8 +49,8 @@ public class ProductsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] Product input, CancellationToken ct)
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] Product input, CancellationToken ct)
     {
         var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (product is null) return NotFound();
@@ -69,8 +69,8 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (product is null) return NotFound();

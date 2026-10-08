@@ -45,6 +45,8 @@ public class AuthController : ControllerBase
             return BadRequest(new { errors });
         }
 
+        await _userManager.AddToRoleAsync(user, "Cliente");
+
         return Ok(new { message = "User registered successfully." });
     }
 
@@ -58,21 +60,30 @@ public class AuthController : ControllerBase
         if (user is null || !await _userManager.CheckPasswordAsync(user, request.Password))
             return Unauthorized(new { message = "Invalid email or password." });
 
+        var userRoles = await _userManager.GetRolesAsync(user);
+
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "FirmezaDevelopmentSecretKeyForJwtTokenGeneration2026!");
         var issuer = _config["Jwt:Issuer"] ?? "FirmezaApi";
         var audience = _config["Jwt:Audience"] ?? "FirmezaClient";
         var expiresAt = DateTime.UtcNow.AddHours(8);
 
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(ClaimTypes.Email, user.Email ?? string.Empty),
+            new(ClaimTypes.Name, user.UserName ?? string.Empty),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        foreach (var role in userRoles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = expiresAt,
             Issuer = issuer,
             Audience = audience,

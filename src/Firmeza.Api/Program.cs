@@ -1,11 +1,26 @@
+using Firmeza.Application;
 using Firmeza.Infrastructure;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(); 
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// CORS para Angular
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "FirmezaDevelopmentSecretKeyForJwtTokenGeneration2026!";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "FirmezaApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "FirmezaClient";
@@ -43,8 +58,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("AllowAngularApp");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+
+// Inicializar roles y admin por defecto
+await Firmeza.Infrastructure.Data.DbInitializer.SeedRolesAndAdminAsync(app.Services);
+
 app.MapControllers();
 app.Run();
+
