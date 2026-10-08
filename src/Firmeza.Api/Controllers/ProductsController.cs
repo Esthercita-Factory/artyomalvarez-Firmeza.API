@@ -1,8 +1,9 @@
+using AutoMapper;
+using Firmeza.Application.DTOs.Products;
+using Firmeza.Application.Interfaces.Persistence;
 using Firmeza.Domain.Entities;
-using Firmeza.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Firmeza.Api.Controllers;
 
@@ -11,72 +12,82 @@ namespace Firmeza.Api.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    private readonly ApplicationDbContext _db;
+    private readonly IProductRepository _productRepo;
+    private readonly IUnitOfWork _uow;
+    private readonly IMapper _mapper;
 
-    public ProductsController(ApplicationDbContext db) => _db = db;
+    public ProductsController(IProductRepository productRepo, IUnitOfWork uow, IMapper mapper)
+    {
+        _productRepo = productRepo;
+        _uow = uow;
+        _mapper = mapper;
+    }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetAll(CancellationToken ct)
-        => Ok(await _db.Products.AsNoTracking().ToListAsync(ct));
+    public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetAll([FromQuery] bool onlyActive = true, CancellationToken ct = default)
+    {
+        var products = await _productRepo.GetAllAsync(onlyActive, ct);
+        return Ok(_mapper.Map<IReadOnlyList<ProductDto>>(products));
+    }
+
+    [HttpGet("low-stock")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetLowStock(CancellationToken ct = default)
+    {
+        var products = await _productRepo.GetLowStockAsync(ct);
+        return Ok(_mapper.Map<IReadOnlyList<ProductDto>>(products));
+    }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Product>> GetById(Guid id, CancellationToken ct)
+    public async Task<ActionResult<ProductDto>> GetById(Guid id, CancellationToken ct = default)
     {
-        var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
-        return product is null ? NotFound() : Ok(product);
+        var product = await _productRepo.GetByIdAsync(id, ct);
+        if (product is null) return NotFound(new { message = $"Producto con ID {id} no encontrado." });
+        return Ok(_mapper.Map<ProductDto>(product));
     }
 
     [HttpPost]
-    public async Task<ActionResult<Product>> Create([FromBody] Product input, CancellationToken ct)
+    [Authorize(Roles = "Administrador")]
+    public async Task<ActionResult<ProductDto>> Create([FromBody] CreateProductDto dto, CancellationToken ct = default)
     {
-        var product = new Product
-        {
-            Sku = input.Sku,
-            Name = input.Name,
-            Description = input.Description,
-            Category = input.Category,
-            UnitOfMeasure = string.IsNullOrWhiteSpace(input.UnitOfMeasure) ? "unidad" : input.UnitOfMeasure,
-            UnitPrice = input.UnitPrice,
-            Stock = input.Stock,
-            MinimumStock = input.MinimumStock,
-            IsActive = input.IsActive,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+        var existing = await _productRepo.GetBySkuAsync(dto.Sku, ct);
+        if (existing is not null)
+            return BadRequest(new { message = $"Ya existe un producto con el SKU '{dto.Sku}'." });
 
-        _db.Products.Add(product);
-        await _db.SaveChangesAsync(ct);
+        var product = _mapper.Map<Product>(dto);
+        await _productRepo.AddAsync(product, ct);
+        await _uow.SaveChangesAsync(ct);
 
-        return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+        var resultDto = _mapper.Map<ProductDto>(product);
+        return CreatedAtAction(nameof(GetById), new { id = product.Id }, resultDto);
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] Product input, CancellationToken ct)
+    [Authorize(Roles = "Administrador")]
+    public async Task<ActionResult<ProductDto>> Update(Guid id, [FromBody] UpdateProductDto dto, CancellationToken ct = default)
     {
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
-        if (product is null) return NotFound();
+        var product = await _productRepo.GetByIdAsync(id, ct);
+        if (product is null) return NotFound(new { message = $"Producto con ID {id} no encontrado." });
 
-        product.Sku = input.Sku;
-        product.Name = input.Name;
-        product.Description = input.Description;
-        product.Category = input.Category;
-        product.UnitOfMeasure = input.UnitOfMeasure;
-        product.UnitPrice = input.UnitPrice;
-        product.Stock = input.Stock;
-        product.MinimumStock = input.MinimumStock;
-        product.IsActive = input.IsActive;
+        _mapper.Map(dto, product);
+        product.UpdatedAtUtc = DateTime.UtcNow;
 
-        await _db.SaveChangesAsync(ct);
-        return NoContent();
+        _productRepo.Update(product);
+        await _uow.SaveChangesAsync(ct);
+
+        return Ok(_mapper.Map<ProductDto>(product));
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
     {
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
-        if (product is null) return NotFound();
+        var product = await _productRepo.GetByIdAsync(id, ct);
+        if (product is null) return NotFound(new { message = $"Producto con ID {id} no encontrado." });
 
-        _db.Products.Remove(product);
-        await _db.SaveChangesAsync(ct);
+        _productRepo.Delete(product);
+        await _uow.SaveChangesAsync(ct);
+
         return NoContent();
     }
 }

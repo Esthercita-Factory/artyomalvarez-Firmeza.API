@@ -1,8 +1,7 @@
-using Firmeza.Domain.Entities;
-using Firmeza.Infrastructure.Data;
+using Firmeza.Application.DTOs.Sales;
+using Firmeza.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Firmeza.Api.Controllers;
 
@@ -11,68 +10,38 @@ namespace Firmeza.Api.Controllers;
 [Route("api/[controller]")]
 public class SalesController : ControllerBase
 {
-    private readonly ApplicationDbContext _db;
+    private readonly ISaleService _saleService;
 
-    public SalesController(ApplicationDbContext db) => _db = db;
+    public SalesController(ISaleService saleService)
+    {
+        _saleService = saleService;
+    }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Sale>>> GetAll(CancellationToken ct)
-        => Ok(await _db.Sales.AsNoTracking().ToListAsync(ct));
+    public async Task<ActionResult<IReadOnlyList<SaleDto>>> GetAll([FromQuery] Guid? customerId, CancellationToken ct)
+    {
+        var sales = await _saleService.GetAllSalesAsync(customerId, ct);
+        return Ok(sales);
+    }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Sale>> GetById(Guid id, CancellationToken ct)
+    public async Task<ActionResult<SaleDto>> GetById(Guid id, CancellationToken ct)
     {
-        var sale = await _db.Sales.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, ct);
-        return sale is null ? NotFound() : Ok(sale);
+        var sale = await _saleService.GetSaleByIdAsync(id, ct);
+        return Ok(sale);
+    }
+
+    [HttpPost("calculate")]
+    public async Task<ActionResult<CartCalculationDto>> CalculateCart([FromBody] List<CartItemDto> items, [FromQuery] decimal taxRate = 0.19m, CancellationToken ct = default)
+    {
+        var calculation = await _saleService.CalculateCartAsync(items, taxRate, ct);
+        return Ok(calculation);
     }
 
     [HttpPost]
-    public async Task<ActionResult<Sale>> Create([FromBody] Sale input, CancellationToken ct)
+    public async Task<ActionResult<SaleDto>> Create([FromBody] CreateSaleDto dto, CancellationToken ct)
     {
-        var sale = new Sale
-        {
-            CustomerId = input.CustomerId,
-            Status = string.IsNullOrWhiteSpace(input.Status) ? "Pendiente" : input.Status,
-            ExternalReference = input.ExternalReference,
-            Subtotal = input.Subtotal,
-            TaxRate = input.TaxRate,
-            TaxAmount = input.TaxAmount,
-            Total = input.Total,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        _db.Sales.Add(sale);
-        await _db.SaveChangesAsync(ct);
-
+        var sale = await _saleService.CreateSaleAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = sale.Id }, sale);
-    }
-
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] Sale input, CancellationToken ct)
-    {
-        var sale = await _db.Sales.FirstOrDefaultAsync(s => s.Id == id, ct);
-        if (sale is null) return NotFound();
-
-        sale.CustomerId = input.CustomerId;
-        sale.Status = input.Status;
-        sale.ExternalReference = input.ExternalReference;
-        sale.Subtotal = input.Subtotal;
-        sale.TaxRate = input.TaxRate;
-        sale.TaxAmount = input.TaxAmount;
-        sale.Total = input.Total;
-
-        await _db.SaveChangesAsync(ct);
-        return NoContent();
-    }
-
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
-    {
-        var sale = await _db.Sales.FirstOrDefaultAsync(s => s.Id == id, ct);
-        if (sale is null) return NotFound();
-
-        _db.Sales.Remove(sale);
-        await _db.SaveChangesAsync(ct);
-        return NoContent();
     }
 }
