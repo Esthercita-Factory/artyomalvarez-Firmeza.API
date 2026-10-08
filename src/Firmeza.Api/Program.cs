@@ -1,3 +1,4 @@
+using Firmeza.Api.Middlewares;
 using Firmeza.Application;
 using Firmeza.Infrastructure;
 using Scalar.AspNetCore;
@@ -49,6 +50,10 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+// Capa de Seguridad y Manejo Global de Excepciones
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -63,10 +68,8 @@ app.UseCors("AllowAngularApp");
 app.UseAuthentication();
 app.UseAuthorization();
 
-
 // Inicializar roles y admin por defecto
 await Firmeza.Infrastructure.Data.DbInitializer.SeedRolesAndAdminAsync(app.Services);
 
 app.MapControllers();
 app.Run();
-

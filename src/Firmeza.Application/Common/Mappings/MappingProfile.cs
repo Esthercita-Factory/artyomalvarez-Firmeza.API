@@ -20,6 +20,7 @@ public class MappingProfile : Profile
         // Customers
         CreateMap<Customer, CustomerDto>();
         CreateMap<CreateCustomerDto, Customer>();
+        CreateMap<UpdateCustomerDto, Customer>();
 
         // Vehicles
         CreateMap<Vehicle, VehicleDto>();
