@@ -1,8 +1,8 @@
 using Firmeza.Application.Interfaces.Persistence;
 using Firmeza.Application.Interfaces.Services;
-using Firmeza.Infrastructure.Data;
 using Firmeza.Infrastructure.Identity;
-using Firmeza.Infrastructure.Repositories;
+using Firmeza.Infrastructure.Persistence;
+using Firmeza.Infrastructure.Persistence.Repositories;
 using Firmeza.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

@@ -483,3 +483,9 @@ $RECYCLE.BIN/
 
 # Local context
 CONTEXTO-FIRMEZA.md
+
+# capturas y respaldos locales
+_scalar_screen.*
+*.xwd
+_backup_*/
+

@@ -15,7 +15,7 @@
       <!-- AutoMapper 13.0.1: Vulnerabilidad conocida CVE-2026-32933 (recursión no controlada) mitigada en código con DTOs sin ciclos y MaxDepth=3 en MappingProfile -->
       <PackageReference Include="AutoMapper" Version="13.0.1" NoWarn="NU1903" />
       <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.2" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
     </ItemGroup>
 
 </Project>
