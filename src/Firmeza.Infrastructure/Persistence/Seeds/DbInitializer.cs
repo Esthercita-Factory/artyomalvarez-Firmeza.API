@@ -1,9 +1,10 @@
 using Firmeza.Infrastructure.Identity;
+using Firmeza.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Firmeza.Infrastructure.Data;
+namespace Firmeza.Infrastructure.Persistence.Seeds;
 
 public static class DbInitializer
 {

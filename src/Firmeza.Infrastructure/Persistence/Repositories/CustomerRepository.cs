@@ -1,9 +1,9 @@
 using Firmeza.Application.Interfaces.Persistence;
 using Firmeza.Domain.Entities;
-using Firmeza.Infrastructure.Data;
+using Firmeza.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Firmeza.Infrastructure.Repositories;
+namespace Firmeza.Infrastructure.Persistence.Repositories;
 
 public class CustomerRepository : ICustomerRepository
 {

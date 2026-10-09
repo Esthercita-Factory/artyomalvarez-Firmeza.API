@@ -69,7 +69,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Inicializar roles y admin por defecto
-await Firmeza.Infrastructure.Data.DbInitializer.SeedRolesAndAdminAsync(app.Services);
+await Firmeza.Infrastructure.Persistence.Seeds.DbInitializer.SeedRolesAndAdminAsync(app.Services);
 
 app.MapControllers();
 app.Run();

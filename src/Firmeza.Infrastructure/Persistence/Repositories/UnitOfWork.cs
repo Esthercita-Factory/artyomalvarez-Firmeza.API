@@ -1,12 +1,12 @@
 using Firmeza.Application.Interfaces.Persistence;
 
-namespace Firmeza.Infrastructure.Repositories;
+namespace Firmeza.Infrastructure.Persistence.Repositories;
 
 public class UnitOfWork : IUnitOfWork
 {
-    private readonly Data.ApplicationDbContext _context;
+    private readonly ApplicationDbContext _context;
 
-    public UnitOfWork(Data.ApplicationDbContext context)
+    public UnitOfWork(ApplicationDbContext context)
     {
         _context = context;
     }

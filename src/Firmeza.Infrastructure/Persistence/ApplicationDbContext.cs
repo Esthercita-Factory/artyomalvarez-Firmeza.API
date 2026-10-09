@@ -3,7 +3,7 @@ using Firmeza.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace Firmeza.Infrastructure.Data;
+namespace Firmeza.Infrastructure.Persistence;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {

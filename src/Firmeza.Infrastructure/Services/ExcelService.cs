@@ -31,7 +31,10 @@ public class ExcelService : IExcelService
 
         using var workbook = new XLWorkbook(fileStream);
         var worksheet = workbook.Worksheet(1);
-        var rows = worksheet.RangeUsed().RowsUsed().Skip(1); // Omitir cabecera
+        var range = worksheet.RangeUsed();
+        if (range is null) return Task.FromResult<IReadOnlyList<ExcelProductRowDto>>(list);
+
+        var rows = range.RowsUsed().Skip(1); // Omitir cabecera
 
         foreach (var row in rows)
         {
@@ -63,7 +66,10 @@ public class ExcelService : IExcelService
 
         using var workbook = new XLWorkbook(fileStream);
         var worksheet = workbook.Worksheet(1);
-        var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
+        var range = worksheet.RangeUsed();
+        if (range is null) return Task.FromResult<IReadOnlyList<ExcelCustomerRowDto>>(list);
+
+        var rows = range.RowsUsed().Skip(1);
 
         foreach (var row in rows)
         {
