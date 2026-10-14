@@ -12,6 +12,8 @@ public interface ISaleService
     Task<CartCalculationDto> CalculateCartAsync(List<CartItemDto> items, decimal taxRate = 0.19m, CancellationToken cancellationToken = default);
     Task<SaleDto> GetSaleByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SaleDto>> GetAllSalesAsync(Guid? customerId = null, CancellationToken cancellationToken = default);
+    Task<SaleDto> CancelSaleAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<byte[]> GetSaleReceiptBytesAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
 public interface IRentalService
@@ -20,6 +22,7 @@ public interface IRentalService
     Task<RentalQuoteDto> CalculateRentalQuoteAsync(Guid vehicleId, DateTime startDate, DateTime endDate, decimal taxRate = 0.19m, CancellationToken cancellationToken = default);
     Task<RentalDto> GetRentalByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RentalDto>> GetAllRentalsAsync(Guid? customerId = null, CancellationToken cancellationToken = default);
+    Task<RentalDto> CancelRentalAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
 public interface IDashboardService

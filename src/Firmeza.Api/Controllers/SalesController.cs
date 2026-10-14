@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using Firmeza.Application.DTOs.Sales;
+using Firmeza.Application.Interfaces.Persistence;
 using Firmeza.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,15 +13,33 @@ namespace Firmeza.Api.Controllers;
 public class SalesController : ControllerBase
 {
     private readonly ISaleService _saleService;
+    private readonly ICustomerRepository _customerRepo;
 
-    public SalesController(ISaleService saleService)
+    public SalesController(ISaleService saleService, ICustomerRepository customerRepo)
     {
         _saleService = saleService;
+        _customerRepo = customerRepo;
     }
 
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<SaleDto>>> GetAll([FromQuery] Guid? customerId, CancellationToken ct)
     {
+        // Mitigación IDOR: Clientes solo ven sus propias ventas
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var customer = !string.IsNullOrWhiteSpace(userEmail)
+                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
+                : null;
+
+            if (customer is null)
+            {
+                return Ok(Array.Empty<SaleDto>());
+            }
+
+            customerId = customer.Id;
+        }
+
         var sales = await _saleService.GetAllSalesAsync(customerId, ct);
         return Ok(sales);
     }
@@ -28,7 +48,45 @@ public class SalesController : ControllerBase
     public async Task<ActionResult<SaleDto>> GetById(Guid id, CancellationToken ct)
     {
         var sale = await _saleService.GetSaleByIdAsync(id, ct);
+
+        // Mitigación IDOR: Verificar que la venta le pertenezca al usuario cliente
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var customer = !string.IsNullOrWhiteSpace(userEmail)
+                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
+                : null;
+
+            if (customer is null || sale.CustomerId != customer.Id)
+            {
+                return Forbid();
+            }
+        }
+
         return Ok(sale);
+    }
+
+    [HttpGet("{id:guid}/receipt")]
+    public async Task<IActionResult> GetReceipt(Guid id, CancellationToken ct)
+    {
+        var sale = await _saleService.GetSaleByIdAsync(id, ct);
+
+        // Mitigación IDOR: Solo el dueño de la venta o el admin puede descargar el recibo
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var customer = !string.IsNullOrWhiteSpace(userEmail)
+                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
+                : null;
+
+            if (customer is null || sale.CustomerId != customer.Id)
+            {
+                return Forbid();
+            }
+        }
+
+        var pdfBytes = await _saleService.GetSaleReceiptBytesAsync(id, ct);
+        return File(pdfBytes, "application/pdf", $"Recibo-{id}.pdf");
     }
 
     [HttpPost("calculate")]
@@ -41,7 +99,39 @@ public class SalesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<SaleDto>> Create([FromBody] CreateSaleDto dto, CancellationToken ct)
     {
+        // Mitigación IDOR: Un cliente no puede forzar la compra a nombre de otro CustomerId
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var customer = !string.IsNullOrWhiteSpace(userEmail)
+                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
+                : null;
+
+            if (customer is null)
+            {
+                return BadRequest(new { message = "Debe completar su perfil de cliente en /api/Customers antes de realizar compras." });
+            }
+
+            dto.CustomerId = customer.Id;
+        }
+
         var sale = await _saleService.CreateSaleAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = sale.Id }, sale);
+    }
+
+    [HttpPut("{id:guid}/cancel")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<ActionResult<SaleDto>> Cancel(Guid id, CancellationToken ct)
+    {
+        var sale = await _saleService.CancelSaleAsync(id, ct);
+        return Ok(sale);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await _saleService.CancelSaleAsync(id, ct);
+        return NoContent();
     }
 }

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -15,11 +16,13 @@ public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _config;
+    private readonly IWebHostEnvironment _env;
 
-    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config)
+    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config, IWebHostEnvironment env)
     {
         _userManager = userManager;
         _config = config;
+        _env = env;
     }
 
     [HttpPost("register")]
@@ -27,6 +30,9 @@ public class AuthController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             return BadRequest(new { message = "Email and password are required." });
+
+        if (!new EmailAddressAttribute().IsValid(request.Email))
+            return BadRequest(new { message = "El formato del correo electrónico no es válido." });
 
         var existingUser = await _userManager.FindByEmailAsync(request.Email);
         if (existingUser is not null)
@@ -62,8 +68,21 @@ public class AuthController : ControllerBase
 
         var userRoles = await _userManager.GetRolesAsync(user);
 
+        var configuredKey = _config["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(configuredKey) || configuredKey.Length < 32)
+        {
+            if (_env.IsDevelopment())
+            {
+                configuredKey = "FirmezaDevelopmentSecretKeyForJwtTokenGeneration2026!";
+            }
+            else
+            {
+                throw new InvalidOperationException("La clave JWT no está configurada o es demasiado corta (mínimo 32 caracteres).");
+            }
+        }
+
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "FirmezaDevelopmentSecretKeyForJwtTokenGeneration2026!");
+        var key = Encoding.UTF8.GetBytes(configuredKey);
         var issuer = _config["Jwt:Issuer"] ?? "FirmezaApi";
         var audience = _config["Jwt:Audience"] ?? "FirmezaClient";
         var expiresAt = DateTime.UtcNow.AddHours(8);

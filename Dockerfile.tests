@@ -1,0 +1,21 @@
+# Dockerfile para ejecución automatizada de pruebas con salida estricta
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS testrunner
+WORKDIR /src
+
+# Copiar archivos de solución y proyectos
+COPY ["Firmeza.sln", "./"]
+COPY ["Directory.Build.props", "./"]
+COPY ["src/Firmeza.Domain/Firmeza.Domain.csproj", "src/Firmeza.Domain/"]
+COPY ["src/Firmeza.Application/Firmeza.Application.csproj", "src/Firmeza.Application/"]
+COPY ["src/Firmeza.Infrastructure/Firmeza.Infrastructure.csproj", "src/Firmeza.Infrastructure/"]
+COPY ["src/Firmeza.Api/Firmeza.Api.csproj", "src/Firmeza.Api/"]
+COPY ["tests/Firmeza.Tests/Firmeza.Tests.csproj", "tests/Firmeza.Tests/"]
+
+# Restaurar todas las dependencias
+RUN dotnet restore "Firmeza.sln"
+
+# Copiar código fuente y suite de pruebas
+COPY . .
+
+# Ejecutar pruebas (si alguna falla, el build o la ejecución retornará código != 0)
+ENTRYPOINT ["dotnet", "test", "tests/Firmeza.Tests/Firmeza.Tests.csproj", "-c", "Release", "--logger:console;verbosity=normal", "--no-restore"]

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AutoMapper;
 using Firmeza.Application.DTOs.Customers;
 using Firmeza.Application.Interfaces.Persistence;
@@ -31,11 +32,36 @@ public class CustomersController : ControllerBase
         return Ok(_mapper.Map<IReadOnlyList<CustomerDto>>(customers));
     }
 
+    [HttpGet("my-profile")]
+    [Authorize(Roles = "Cliente")]
+    public async Task<ActionResult<CustomerDto>> GetMyProfile(CancellationToken ct = default)
+    {
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(userEmail)) return Unauthorized();
+
+        var customer = await _customerRepo.GetByEmailAsync(userEmail, ct);
+        if (customer is null)
+            return NotFound(new { message = "No se encontró un perfil de cliente asociado a su cuenta de usuario." });
+
+        return Ok(_mapper.Map<CustomerDto>(customer));
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CustomerDto>> GetById(Guid id, CancellationToken ct = default)
     {
         var customer = await _customerRepo.GetByIdAsync(id, ct);
         if (customer is null) return NotFound(new { message = $"Cliente con ID {id} no encontrado." });
+
+        // Mitigación IDOR: si no es admin, solo puede consultar su propio registro
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (!customer.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                return Forbid();
+            }
+        }
+
         return Ok(_mapper.Map<CustomerDto>(customer));
     }
 
@@ -44,12 +70,33 @@ public class CustomersController : ControllerBase
     {
         var customer = await _customerRepo.GetByDocumentAsync(documentNumber, ct);
         if (customer is null) return NotFound(new { message = $"Cliente con documento '{documentNumber}' no encontrado." });
+
+        // Mitigación IDOR: un cliente no puede consultar documentos de terceros
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (!customer.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                return Forbid();
+            }
+        }
+
         return Ok(_mapper.Map<CustomerDto>(customer));
     }
 
     [HttpPost]
     public async Task<ActionResult<CustomerDto>> Create([FromBody] CreateCustomerDto dto, CancellationToken ct = default)
     {
+        // Si es rol Cliente, forzar que el correo coincida con el usuario autenticado
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (!string.IsNullOrWhiteSpace(userEmail) && !dto.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { message = "El correo del perfil de cliente debe coincidir con su correo de cuenta autenticada." });
+            }
+        }
+
         var existingDoc = await _customerRepo.GetByDocumentAsync(dto.DocumentNumber, ct);
         if (existingDoc is not null)
             return BadRequest(new { message = $"Ya existe un cliente con el documento '{dto.DocumentNumber}'." });
@@ -71,6 +118,16 @@ public class CustomersController : ControllerBase
     {
         var customer = await _customerRepo.GetByIdAsync(id, ct);
         if (customer is null) return NotFound(new { message = $"Cliente con ID {id} no encontrado." });
+
+        // Mitigación IDOR: clientes solo modifican su propio perfil
+        if (!User.IsInRole("Administrador"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (!customer.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                return Forbid();
+            }
+        }
 
         _mapper.Map(dto, customer);
         customer.UpdatedAtUtc = DateTime.UtcNow;

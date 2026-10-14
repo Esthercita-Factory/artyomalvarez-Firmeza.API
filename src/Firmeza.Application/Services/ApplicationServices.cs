@@ -17,19 +17,25 @@ public class SaleService : ISaleService
     private readonly ICustomerRepository _customerRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IPdfService _pdfService;
+    private readonly IEmailService _emailService;
 
     public SaleService(
         ISaleRepository saleRepository,
         IProductRepository productRepository,
         ICustomerRepository customerRepository,
         IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IMapper mapper,
+        IPdfService pdfService,
+        IEmailService emailService)
     {
         _saleRepository = saleRepository;
         _productRepository = productRepository;
         _customerRepository = customerRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _pdfService = pdfService;
+        _emailService = emailService;
     }
 
     public async Task<CartCalculationDto> CalculateCartAsync(List<CartItemDto> items, decimal taxRate = 0.19m, CancellationToken cancellationToken = default)
@@ -103,7 +109,49 @@ public class SaleService : ISaleService
         await _saleRepository.AddAsync(sale, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return _mapper.Map<SaleDto>(sale);
+        var saleDto = _mapper.Map<SaleDto>(sale);
+        saleDto.CustomerName = $"{customer.FirstName} {customer.LastName}".Trim();
+        saleDto.CustomerEmail = customer.Email;
+
+        // Generar recibo en PDF y enviar notificación por correo electrónico (S2 y S4)
+        try
+        {
+            var pdfBytes = await _pdfService.GenerateSaleReceiptPdfAsync(saleDto, cancellationToken);
+
+            var receiptsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "recibos");
+            if (!Directory.Exists(receiptsDir))
+            {
+                Directory.CreateDirectory(receiptsDir);
+            }
+
+            var receiptPath = Path.Combine(receiptsDir, $"{sale.Id}.pdf");
+            await File.WriteAllBytesAsync(receiptPath, pdfBytes, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(customer.Email))
+            {
+                var emailSubject = $"Comprobante de compra - Factura #{sale.Id.ToString()[..8].ToUpper()}";
+                var emailBody = $@"
+                    <h2>¡Gracias por su compra en Firmeza!</h2>
+                    <p>Estimado/a <strong>{customer.FirstName} {customer.LastName}</strong>,</p>
+                    <p>Su compra por un valor total de <strong>${sale.Total:N2}</strong> ha sido procesada exitosamente.</p>
+                    <p>Adjuntamos el comprobante de pago oficial en formato PDF.</p>
+                ";
+
+                await _emailService.SendEmailAsync(
+                    customer.Email,
+                    emailSubject,
+                    emailBody,
+                    pdfBytes,
+                    $"Recibo-{sale.Id}.pdf",
+                    cancellationToken);
+            }
+        }
+        catch
+        {
+            // Falla de notificación externa no cancela la persistencia de la transacción
+        }
+
+        return saleDto;
     }
 
     public async Task<SaleDto> GetSaleByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -118,6 +166,57 @@ public class SaleService : ISaleService
     {
         var sales = await _saleRepository.GetAllAsync(customerId, cancellationToken);
         return _mapper.Map<IReadOnlyList<SaleDto>>(sales);
+    }
+
+    public async Task<SaleDto> CancelSaleAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var sale = await _saleRepository.GetByIdWithDetailsAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"La venta con ID {id} no fue encontrada.");
+
+        if (sale.Status == "Cancelado")
+        {
+            throw new ValidationException("La venta ya se encuentra en estado cancelado.");
+        }
+
+        // Devolver stock de los productos
+        foreach (var detail in sale.Details)
+        {
+            var product = await _productRepository.GetByIdAsync(detail.ProductId, cancellationToken);
+            if (product != null)
+            {
+                product.Stock += detail.Quantity;
+                _productRepository.Update(product);
+            }
+        }
+
+        sale.Status = "Cancelado";
+        _saleRepository.Update(sale);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return _mapper.Map<SaleDto>(sale);
+    }
+
+    public async Task<byte[]> GetSaleReceiptBytesAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var receiptsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "recibos");
+        var receiptPath = Path.Combine(receiptsDir, $"{id}.pdf");
+
+        if (File.Exists(receiptPath))
+        {
+            return await File.ReadAllBytesAsync(receiptPath, cancellationToken);
+        }
+
+        // Si el archivo no está en disco, se regenera con los datos de la venta
+        var sale = await GetSaleByIdAsync(id, cancellationToken);
+        var pdfBytes = await _pdfService.GenerateSaleReceiptPdfAsync(sale, cancellationToken);
+
+        if (!Directory.Exists(receiptsDir))
+        {
+            Directory.CreateDirectory(receiptsDir);
+        }
+
+        await File.WriteAllBytesAsync(receiptPath, pdfBytes, cancellationToken);
+        return pdfBytes;
     }
 }
 
@@ -225,6 +324,30 @@ public class RentalService : IRentalService
     {
         var rentals = await _rentalRepository.GetAllAsync(customerId, null, cancellationToken);
         return _mapper.Map<IReadOnlyList<RentalDto>>(rentals);
+    }
+
+    public async Task<RentalDto> CancelRentalAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var rental = await _rentalRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"El contrato de alquiler con ID {id} no fue encontrado.");
+
+        if (rental.Status == RentalStatus.Cancelled)
+        {
+            throw new ValidationException("El contrato de alquiler ya se encuentra cancelado.");
+        }
+
+        rental.Status = RentalStatus.Cancelled;
+        _rentalRepository.Update(rental);
+
+        var vehicle = await _vehicleRepository.GetByIdAsync(rental.VehicleId, cancellationToken);
+        if (vehicle != null)
+        {
+            vehicle.Status = VehicleStatus.Available;
+            _vehicleRepository.Update(vehicle);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<RentalDto>(rental);
     }
 }
 
