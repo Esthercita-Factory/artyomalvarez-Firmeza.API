@@ -9,7 +9,7 @@ Firmeza es una plataforma backend diseñada para centralizar dos lineas de negoc
 1. Venta y distribucion de materiales de construccion: control de catalogo de productos clasificados por marcas y SKU, control de inventario, deteccion automatica de stock critico y calculo dinamico de carritos de compras con impuestos.
 2. Alquiler de flota de vehiculos y maquinaria: gestion de camiones, maquinaria pesada y remolques, cotizador de costos por dias de alquiler, control de estados de flota y prevencion de solapamientos de fechas de reserva.
 
-El sistema expone una API RESTful desacoplada consumida exclusivamente mediante peticiones HTTP por una aplicacion cliente SPA desarrollada en Angular. La persistencia opera sobre PostgreSQL alojado en Supabase a traves de Entity Framework Core, con seguridad administrada por ASP.NET Core Identity y tokens JWT.
+El sistema expone una API RESTful desacoplada consumida exclusivamente mediante peticiones HTTP por una aplicacion cliente SPA  desarrollada en Angular. La persistencia opera sobre PostgreSQL alojado en Supabase a traves de Entity Framework Core, con seguridad administrada por ASP.NET Core Identity y tokens JWT.
 
 ## Conceptos de Arquitectura y .NET Aplicados
 
