@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Firmeza.Application.DTOs.Rentals;
 using Firmeza.Application.Interfaces.Persistence;
 using Firmeza.Application.Interfaces.Services;
+using Firmeza.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,11 +28,7 @@ public class RentalsController : ControllerBase
         // Mitigación IDOR: Clientes solo ven sus propios contratos de alquiler
         if (!User.IsInRole("Administrador"))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var customer = !string.IsNullOrWhiteSpace(userEmail)
-                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
-                : null;
-
+            var customer = await GetCurrentCustomerAsync(ct);
             if (customer is null)
             {
                 return Ok(Array.Empty<RentalDto>());
@@ -49,17 +46,13 @@ public class RentalsController : ControllerBase
     {
         var rental = await _rentalService.GetRentalByIdAsync(id, ct);
 
-        // Mitigación IDOR: Verificar pertenencia si es rol Cliente
+        // Mitigación IDOR: Retornar 404 si el alquiler no pertenece al cliente (evita enumeración de IDs)
         if (!User.IsInRole("Administrador"))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var customer = !string.IsNullOrWhiteSpace(userEmail)
-                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
-                : null;
-
+            var customer = await GetCurrentCustomerAsync(ct);
             if (customer is null || rental.CustomerId != customer.Id)
             {
-                return Forbid();
+                return NotFound(new { message = $"Alquiler con ID {id} no encontrado." });
             }
         }
 
@@ -83,11 +76,7 @@ public class RentalsController : ControllerBase
         // Mitigación IDOR: El cliente no puede alquilar a nombre de un tercero
         if (!User.IsInRole("Administrador"))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var customer = !string.IsNullOrWhiteSpace(userEmail)
-                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
-                : null;
-
+            var customer = await GetCurrentCustomerAsync(ct);
             if (customer is null)
             {
                 return BadRequest(new { message = "Debe completar su perfil de cliente en /api/Customers antes de solicitar un alquiler." });
@@ -98,6 +87,24 @@ public class RentalsController : ControllerBase
 
         var rental = await _rentalService.CreateRentalAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = rental.Id }, rental);
+    }
+
+    private async Task<Customer?> GetCurrentCustomerAsync(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var customer = await _customerRepo.GetByUserIdAsync(userId, ct);
+            if (customer != null) return customer;
+        }
+
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        if (!string.IsNullOrEmpty(userEmail))
+        {
+            return await _customerRepo.GetByEmailAsync(userEmail, ct);
+        }
+
+        return null;
     }
 
     [HttpPut("{id:guid}/cancel")]
