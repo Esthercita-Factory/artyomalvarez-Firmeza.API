@@ -92,13 +92,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Habilitar archivos estáticos para la descarga de recibos en wwwroot
-var receiptsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "recibos");
-if (!Directory.Exists(receiptsPath))
-{
-    Directory.CreateDirectory(receiptsPath);
-}
-app.UseStaticFiles();
+// Seguridad de Recibos: NO se sirven como archivos estáticos públicos sin autenticación.
+// La descarga está estrictamente restringida al endpoint autenticado y controlado por IDOR: GET /api/Sales/{id}/receipt
 
 app.UseCors("AllowAngularApp");
 

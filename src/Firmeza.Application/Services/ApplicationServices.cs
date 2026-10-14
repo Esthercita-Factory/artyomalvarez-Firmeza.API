@@ -118,7 +118,7 @@ public class SaleService : ISaleService
         {
             var pdfBytes = await _pdfService.GenerateSaleReceiptPdfAsync(saleDto, cancellationToken);
 
-            var receiptsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "recibos");
+            var receiptsDir = Path.Combine(Directory.GetCurrentDirectory(), "Storage", "recibos");
             if (!Directory.Exists(receiptsDir))
             {
                 Directory.CreateDirectory(receiptsDir);
@@ -198,7 +198,7 @@ public class SaleService : ISaleService
 
     public async Task<byte[]> GetSaleReceiptBytesAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var receiptsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "recibos");
+        var receiptsDir = Path.Combine(Directory.GetCurrentDirectory(), "Storage", "recibos");
         var receiptPath = Path.Combine(receiptsDir, $"{id}.pdf");
 
         if (File.Exists(receiptPath))
