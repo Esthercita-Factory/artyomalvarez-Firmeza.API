@@ -24,6 +24,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetAll([FromQuery] bool onlyActive = true, CancellationToken ct = default)
     {
         var products = await _productRepo.GetAllAsync(onlyActive, ct);
@@ -39,6 +40,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     public async Task<ActionResult<ProductDto>> GetById(Guid id, CancellationToken ct = default)
     {
         var product = await _productRepo.GetByIdAsync(id, ct);

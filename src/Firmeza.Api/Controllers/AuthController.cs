@@ -93,7 +93,7 @@ public class AuthController : ControllerBase
         var token = tokenHandler.CreateToken(tokenDescriptor);
         var tokenString = tokenHandler.WriteToken(token);
 
-        return Ok(new AuthResponse(tokenString, expiresAt));
+        return Ok(new AuthResponse(tokenString, expiresAt, user.Id, user.Email, userRoles));
     }
 
     [Authorize]
@@ -108,11 +108,13 @@ public class AuthController : ControllerBase
         if (user is null)
             return NotFound();
 
-        return Ok(new UserInfoResponse(user.Id, user.Email, user.UserName));
+        var roles = await _userManager.GetRolesAsync(user);
+
+        return Ok(new UserInfoResponse(user.Id, user.Email, user.UserName, roles));
     }
 }
 
 public record RegisterRequest(string Email, string Password);
 public record LoginRequest(string Email, string Password);
-public record AuthResponse(string Token, DateTime ExpiresAt);
-public record UserInfoResponse(string Id, string? Email, string? UserName);
+public record AuthResponse(string Token, DateTime ExpiresAt, string UserId, string? Email, IList<string> Roles);
+public record UserInfoResponse(string Id, string? Email, string? UserName, IList<string> Roles);

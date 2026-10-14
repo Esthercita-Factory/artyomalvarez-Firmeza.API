@@ -25,6 +25,7 @@ public class VehiclesController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<VehicleDto>>> GetAll(
         [FromQuery] VehicleStatus? status,
         [FromQuery] VehicleType? type,
@@ -35,6 +36,7 @@ public class VehiclesController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     public async Task<ActionResult<VehicleDto>> GetById(Guid id, CancellationToken ct)
     {
         var vehicle = await _vehicleRepo.GetByIdAsync(id, ct);
