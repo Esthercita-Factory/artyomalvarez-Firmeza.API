@@ -15,18 +15,7 @@ El sistema expone una API RESTful desacoplada consumida exclusivamente mediante 
 
 ## Diagramas de Arquitectura y Diseño
 
-### 1. Diagrama de Arquitectura de Capas
 
-```mermaid
-graph TD
-    Client[Cliente Angular SPA] -->|HTTP / JSON / JWT| API[Firmeza.Api]
-    API --> Application[Firmeza.Application]
-    API --> Infrastructure[Firmeza.Infrastructure]
-    Infrastructure --> Application
-    Infrastructure -->|Implementa| Domain[Firmeza.Domain]
-    Application -->|Depende de| Domain
-    Infrastructure -->|Npgsql / EF Core| Database[(PostgreSQL en Supabase)]
-```
 
 ### 2. Diagrama Entidad-Relación (ER)
 
