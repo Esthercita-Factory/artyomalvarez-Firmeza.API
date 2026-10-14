@@ -5,6 +5,7 @@ namespace Firmeza.Application.Interfaces.Persistence;
 public interface ICustomerRepository
 {
     Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Customer?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default);
     Task<Customer?> GetByDocumentAsync(string documentNumber, CancellationToken cancellationToken = default);
     Task<Customer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken = default);

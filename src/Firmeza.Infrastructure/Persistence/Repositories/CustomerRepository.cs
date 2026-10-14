@@ -19,6 +19,11 @@ public class CustomerRepository : ICustomerRepository
         return await _context.Customers.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
+    public async Task<Customer?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+    }
+
     public async Task<Customer?> GetByDocumentAsync(string documentNumber, CancellationToken cancellationToken = default)
     {
         return await _context.Customers.FirstOrDefaultAsync(c => c.DocumentNumber == documentNumber, cancellationToken);
