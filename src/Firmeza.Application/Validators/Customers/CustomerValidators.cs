@@ -23,6 +23,10 @@ public class CreateCustomerDtoValidator : AbstractValidator<CreateCustomerDto>
             .NotEmpty().WithMessage("El correo electrónico es obligatorio.")
             .EmailAddress().WithMessage("El formato del correo electrónico no es válido.");
 
+        RuleFor(x => x.Phone)
+            .Matches(@"^\+?[0-9\s\-()]{7,20}$").When(x => !string.IsNullOrWhiteSpace(x.Phone))
+            .WithMessage("El formato del teléfono no es válido.");
+
         RuleFor(x => x.Age)
             .GreaterThanOrEqualTo(18).When(x => x.Age.HasValue)
             .WithMessage("El cliente debe ser mayor de edad.");
@@ -48,6 +52,10 @@ public class UpdateCustomerDtoValidator : AbstractValidator<UpdateCustomerDto>
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("El correo electrónico es obligatorio.")
             .EmailAddress().WithMessage("El formato del correo electrónico no es válido.");
+
+        RuleFor(x => x.Phone)
+            .Matches(@"^\+?[0-9\s\-()]{7,20}$").When(x => !string.IsNullOrWhiteSpace(x.Phone))
+            .WithMessage("El formato del teléfono no es válido.");
 
         RuleFor(x => x.Age)
             .GreaterThanOrEqualTo(18).When(x => x.Age.HasValue)

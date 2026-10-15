@@ -25,9 +25,13 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetAll([FromQuery] bool onlyActive = true, CancellationToken ct = default)
+    public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetAll(
+        [FromQuery] bool onlyActive = true,
+        [FromQuery] string? search = null,
+        [FromQuery] string? category = null,
+        CancellationToken ct = default)
     {
-        var products = await _productRepo.GetAllAsync(onlyActive, ct);
+        var products = await _productRepo.GetAllAsync(onlyActive, search, category, ct);
         return Ok(_mapper.Map<IReadOnlyList<ProductDto>>(products));
     }
 

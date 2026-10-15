@@ -9,6 +9,7 @@ public interface ICustomerRepository
     Task<Customer?> GetByDocumentAsync(string documentNumber, CancellationToken cancellationToken = default);
     Task<Customer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Customer>> GetAllAsync(string? search, CancellationToken cancellationToken = default);
     Task AddAsync(Customer customer, CancellationToken cancellationToken = default);
     Task AddRangeAsync(IEnumerable<Customer> customers, CancellationToken cancellationToken = default);
     void Update(Customer customer);

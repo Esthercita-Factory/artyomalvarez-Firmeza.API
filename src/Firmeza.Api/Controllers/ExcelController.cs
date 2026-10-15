@@ -67,6 +67,20 @@ public class ExcelController : ControllerBase
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Ventas-Firmeza-{DateTime.UtcNow:yyyyMMddHHmm}.xlsx");
     }
 
+    [HttpGet("export-products")]
+    public async Task<IActionResult> ExportProducts(CancellationToken ct)
+    {
+        var bytes = await _excelService.ExportProductsToExcelAsync(ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Productos-Firmeza-{DateTime.UtcNow:yyyyMMddHHmm}.xlsx");
+    }
+
+    [HttpGet("export-customers")]
+    public async Task<IActionResult> ExportCustomers(CancellationToken ct)
+    {
+        var bytes = await _excelService.ExportCustomersToExcelAsync(ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Clientes-Firmeza-{DateTime.UtcNow:yyyyMMddHHmm}.xlsx");
+    }
+
     private static string? ValidateExcelFile(IFormFile? file)
     {
         if (file == null || file.Length == 0)

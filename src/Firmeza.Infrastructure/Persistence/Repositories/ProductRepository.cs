@@ -24,13 +24,33 @@ public class ProductRepository : IProductRepository
         return await _context.Products.FirstOrDefaultAsync(p => p.Sku == sku, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Product>> GetAllAsync(bool onlyActive = true, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<Product>> GetAllAsync(bool onlyActive = true, CancellationToken cancellationToken = default)
+    {
+        return GetAllAsync(onlyActive, null, null, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Product>> GetAllAsync(bool onlyActive, string? search, string? category, CancellationToken cancellationToken = default)
     {
         var query = _context.Products.AsNoTracking();
         if (onlyActive)
         {
             query = query.Where(p => p.IsActive);
         }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(term)
+                                  || p.Sku.ToLower().Contains(term)
+                                  || p.Brand.ToLower().Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            var cat = category.Trim().ToLower();
+            query = query.Where(p => p.Category.ToLower() == cat);
+        }
+
         return await query.OrderBy(p => p.Name).ToListAsync(cancellationToken);
     }
 

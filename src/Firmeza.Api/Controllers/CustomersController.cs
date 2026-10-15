@@ -26,9 +26,9 @@ public class CustomersController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Administrador")]
-    public async Task<ActionResult<IReadOnlyList<CustomerDto>>> GetAll(CancellationToken ct = default)
+    public async Task<ActionResult<IReadOnlyList<CustomerDto>>> GetAll([FromQuery] string? search = null, CancellationToken ct = default)
     {
-        var customers = await _customerRepo.GetAllAsync(ct);
+        var customers = await _customerRepo.GetAllAsync(search, ct);
         return Ok(_mapper.Map<IReadOnlyList<CustomerDto>>(customers));
     }
 
