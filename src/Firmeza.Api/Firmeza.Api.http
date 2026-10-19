@@ -1,6 +1,226 @@
-@Firmeza.Api_HostAddress = http://localhost:5054
+@HostAddress = http://localhost:5054/api
 
-GET {{Firmeza.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### =========================================================================
+### 1. AUTENTICACIÓN E IDENTITY
+### =========================================================================
+
+### 1.1 Registro de nuevo Cliente
+# @name registerCustomer
+POST {{HostAddress}}/Auth/register
+Content-Type: application/json
+
+{
+  "email": "contratista.nuevo@empresa.com",
+  "password": "Password123!"
+}
+
+### 1.2 Registro Inválido (Password débil - Espera 400 Bad Request)
+POST {{HostAddress}}/Auth/register
+Content-Type: application/json
+
+{
+  "email": "invalido@firmeza.com",
+  "password": "123"
+}
+
+### 1.3 Login Administrador
+# @name loginAdmin
+POST {{HostAddress}}/Auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@firmeza.com",
+  "password": "Admin123*Password"
+}
 
 ###
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 1.4 Login Cliente
+# @name loginClient
+POST {{HostAddress}}/Auth/login
+Content-Type: application/json
+
+{
+  "email": "contratista.nuevo@empresa.com",
+  "password": "Password123!"
+}
+
+###
+@clientToken = {{loginClient.response.body.token}}
+
+### 1.5 Obtener Información de Usuario Actual (/me)
+GET {{HostAddress}}/Auth/me
+Authorization: Bearer {{clientToken}}
+
+### =========================================================================
+### 2. PRODUCTOS Y MATERIALES DE CONSTRUCCIÓN
+### =========================================================================
+
+### 2.1 Listar Catálogo Público (Sin Token)
+GET {{HostAddress}}/Products?onlyActive=true
+
+### 2.2 Filtrar Productos por Búsqueda y Categoría
+GET {{HostAddress}}/Products?search=cemento&category=Cementos%20y%20Mezclas
+
+### 2.3 Crear Producto (Como Administrador - Espera 201 Created)
+# @name createProduct
+POST {{HostAddress}}/Products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "sku": "ACR-999",
+  "name": "Malla Electrosoldada M-188 6mm",
+  "brand": "Diaco",
+  "category": "Aceros y Hierros",
+  "unitOfMeasure": "Panel",
+  "unitPrice": 145000.00,
+  "stock": 80,
+  "minimumStock": 10,
+  "isActive": true
+}
+
+###
+@createdProductId = {{createProduct.response.body.id}}
+
+### 2.4 Intentar Crear Producto Como Cliente (Espera 403 Forbidden)
+POST {{HostAddress}}/Products
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "sku": "HACK-001",
+  "name": "Material No Autorizado",
+  "brand": "Generica",
+  "category": "Ferretería",
+  "unitPrice": 1000,
+  "stock": 10
+}
+
+### 2.5 Exportar Catálogo de Productos a PDF (Admin - Espera File application/pdf)
+GET {{HostAddress}}/Products/export-pdf
+Authorization: Bearer {{adminToken}}
+
+### =========================================================================
+### 3. CLIENTES Y GESTIÓN DE PERFILES
+### =========================================================================
+
+### 3.1 Consultar Directorio de Clientes (Admin)
+GET {{HostAddress}}/Customers
+Authorization: Bearer {{adminToken}}
+
+### 3.2 Consultar Perfil Propio (Cliente Autenticado)
+GET {{HostAddress}}/Customers/my-profile
+Authorization: Bearer {{clientToken}}
+
+### 3.3 Exportar Directorio de Clientes a PDF (Admin)
+GET {{HostAddress}}/Customers/export-pdf
+Authorization: Bearer {{adminToken}}
+
+### =========================================================================
+### 4. FLOTA Y VEHÍCULOS
+### =========================================================================
+
+### 4.1 Listar Flota Disponible (Público)
+# @name getVehicles
+GET {{HostAddress}}/Vehicles
+
+###
+@sampleVehicleId = {{getVehicles.response.body[0].id}}
+
+### 4.2 Crear Vehículo (Admin)
+POST {{HostAddress}}/Vehicles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "plate": "OBR-501",
+  "brand": "Caterpillar",
+  "model": "Motoniveladora 140K",
+  "year": 2023,
+  "type": 1,
+  "dailyRate": 1250000.00,
+  "loadCapacity": "17.5 Ton",
+  "status": 0,
+  "isActive": true
+}
+
+### =========================================================================
+### 5. ALQUILERES Y COTIZACIONES (Mitigación IDOR y Validación)
+### =========================================================================
+
+### 5.1 Calcular Cotización de Alquiler
+POST {{HostAddress}}/Rentals/quote?vehicleId={{sampleVehicleId}}&startDate=2026-10-20&endDate=2026-10-25
+Authorization: Bearer {{clientToken}}
+
+### 5.2 Solicitar Alquiler como Cliente (Auto-asignación de CustomerId sin IDOR)
+# @name createRental
+POST {{HostAddress}}/Rentals
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "vehicleId": "{{sampleVehicleId}}",
+  "startDate": "2026-10-20",
+  "endDate": "2026-10-25",
+  "notes": "Entrega en Patio de Obra Kilómetro 7 Vía Funza"
+}
+
+###
+@createdRentalId = {{createRental.response.body.id}}
+
+### 5.3 Consultar Historial de Alquileres Propios (Cliente solo ve los suyos)
+GET {{HostAddress}}/Rentals
+Authorization: Bearer {{clientToken}}
+
+### =========================================================================
+### 6. CARRITO Y REGISTRO DE VENTAS
+### =========================================================================
+
+### 6.1 Simulación Financiera del Carrito (Subtotal, IVA 19%, Total)
+POST {{HostAddress}}/Sales/calculate?taxRate=0.19
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+[
+  {
+    "productId": "{{createdProductId}}",
+    "quantity": 2
+  }
+]
+
+### 6.2 Confirmar Compra de Materiales (Cliente - Auto-asignación de CustomerId)
+# @name createSale
+POST {{HostAddress}}/Sales
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "{{createdProductId}}",
+      "quantity": 2
+    }
+  ]
+}
+
+###
+@createdSaleId = {{createSale.response.body.id}}
+
+### 6.3 Descargar Recibo PDF de la Venta (IDOR protegido)
+GET {{HostAddress}}/Sales/{{createdSaleId}}/receipt
+Authorization: Bearer {{clientToken}}
+
+### 6.4 Intentar Comprar sin Token (Espera 401 Unauthorized)
+POST {{HostAddress}}/Sales
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "{{createdProductId}}",
+      "quantity": 1
+    }
+  ]
+}
