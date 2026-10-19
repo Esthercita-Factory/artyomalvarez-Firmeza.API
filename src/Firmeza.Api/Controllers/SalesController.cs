@@ -116,7 +116,14 @@ public class SalesController : ControllerBase
         var userEmail = User.FindFirstValue(ClaimTypes.Email);
         if (!string.IsNullOrEmpty(userEmail))
         {
-            return await _customerRepo.GetByEmailAsync(userEmail, ct);
+            var customer = await _customerRepo.GetByEmailAsync(userEmail, ct);
+            if (customer != null) return customer;
+        }
+
+        // Auto-provisioning resiliente para cuentas de cliente autenticadas sin perfil previo
+        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(userEmail))
+        {
+            return await _customerRepo.GetOrCreateForUserAsync(userId, userEmail, ct);
         }
 
         return null;

@@ -55,6 +55,39 @@ public class CustomerRepository : ICustomerRepository
         return await query.OrderBy(c => c.LastName).ThenBy(c => c.FirstName).ToListAsync(cancellationToken);
     }
 
+    public async Task<Customer> GetOrCreateForUserAsync(string userId, string email, CancellationToken cancellationToken = default)
+    {
+        var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+        if (customer != null) return customer;
+
+        customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email.ToLower() == email.ToLower(), cancellationToken);
+        if (customer != null)
+        {
+            if (string.IsNullOrEmpty(customer.UserId))
+            {
+                customer.UserId = userId;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            return customer;
+        }
+
+        var docNum = "CLI-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        customer = new Customer
+        {
+            UserId = userId,
+            Email = email,
+            FirstName = email.Split('@')[0],
+            LastName = "Cliente",
+            DocumentType = "CC",
+            DocumentNumber = docNum,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        await _context.Customers.AddAsync(customer, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+        return customer;
+    }
+
     public async Task AddAsync(Customer customer, CancellationToken cancellationToken = default)
     {
         await _context.Customers.AddAsync(customer, cancellationToken);

@@ -84,6 +84,10 @@ public class RentalsController : ControllerBase
 
             dto.CustomerId = customer.Id;
         }
+        else if (dto.CustomerId == Guid.Empty)
+        {
+            return BadRequest(new { message = "El identificador del cliente es obligatorio para contratos creados por administradores." });
+        }
 
         var rental = await _rentalService.CreateRentalAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = rental.Id }, rental);
@@ -101,7 +105,14 @@ public class RentalsController : ControllerBase
         var userEmail = User.FindFirstValue(ClaimTypes.Email);
         if (!string.IsNullOrEmpty(userEmail))
         {
-            return await _customerRepo.GetByEmailAsync(userEmail, ct);
+            var customer = await _customerRepo.GetByEmailAsync(userEmail, ct);
+            if (customer != null) return customer;
+        }
+
+        // Auto-provisioning resiliente para cuentas de cliente autenticadas sin perfil previo
+        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(userEmail))
+        {
+            return await _customerRepo.GetOrCreateForUserAsync(userId, userEmail, ct);
         }
 
         return null;

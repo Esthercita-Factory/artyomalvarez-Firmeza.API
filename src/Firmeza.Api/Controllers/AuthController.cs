@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Firmeza.Application.Interfaces.Persistence;
 using Firmeza.Application.Interfaces.Services;
 using Firmeza.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,7 @@ namespace Firmeza.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ICustomerRepository _customerRepo;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
     private readonly IEmailService _emailService;
@@ -23,12 +25,14 @@ public class AuthController : ControllerBase
 
     public AuthController(
         UserManager<ApplicationUser> userManager,
+        ICustomerRepository customerRepo,
         IConfiguration config,
         IWebHostEnvironment env,
         IEmailService emailService,
         ILogger<AuthController> logger)
     {
         _userManager = userManager;
+        _customerRepo = customerRepo;
         _config = config;
         _env = env;
         _emailService = emailService;
@@ -62,6 +66,7 @@ public class AuthController : ControllerBase
         }
 
         await _userManager.AddToRoleAsync(user, "Cliente");
+        await _customerRepo.GetOrCreateForUserAsync(user.Id, user.Email!);
 
         // Enviar notificación de bienvenida por correo electrónico (S3-T8)
         try
