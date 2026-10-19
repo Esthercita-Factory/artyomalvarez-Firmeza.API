@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Firmeza.Application.DTOs.Sales;
 using Firmeza.Application.Interfaces.Persistence;
 using Firmeza.Application.Interfaces.Services;
+using Firmeza.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,11 +28,7 @@ public class SalesController : ControllerBase
         // Mitigación IDOR: Clientes solo ven sus propias ventas
         if (!User.IsInRole("Administrador"))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var customer = !string.IsNullOrWhiteSpace(userEmail)
-                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
-                : null;
-
+            var customer = await GetCurrentCustomerAsync(ct);
             if (customer is null)
             {
                 return Ok(Array.Empty<SaleDto>());
@@ -49,17 +46,13 @@ public class SalesController : ControllerBase
     {
         var sale = await _saleService.GetSaleByIdAsync(id, ct);
 
-        // Mitigación IDOR: Verificar que la venta le pertenezca al usuario cliente
+        // Mitigación IDOR: Retornar 404 si la venta no pertenece al cliente (evita enumeración de IDs)
         if (!User.IsInRole("Administrador"))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var customer = !string.IsNullOrWhiteSpace(userEmail)
-                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
-                : null;
-
+            var customer = await GetCurrentCustomerAsync(ct);
             if (customer is null || sale.CustomerId != customer.Id)
             {
-                return Forbid();
+                return NotFound(new { message = $"Venta con ID {id} no encontrada." });
             }
         }
 
@@ -74,14 +67,10 @@ public class SalesController : ControllerBase
         // Mitigación IDOR: Solo el dueño de la venta o el admin puede descargar el recibo
         if (!User.IsInRole("Administrador"))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var customer = !string.IsNullOrWhiteSpace(userEmail)
-                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
-                : null;
-
+            var customer = await GetCurrentCustomerAsync(ct);
             if (customer is null || sale.CustomerId != customer.Id)
             {
-                return Forbid();
+                return NotFound(new { message = $"Venta con ID {id} no encontrada." });
             }
         }
 
@@ -102,11 +91,7 @@ public class SalesController : ControllerBase
         // Mitigación IDOR: Un cliente no puede forzar la compra a nombre de otro CustomerId
         if (!User.IsInRole("Administrador"))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var customer = !string.IsNullOrWhiteSpace(userEmail)
-                ? await _customerRepo.GetByEmailAsync(userEmail, ct)
-                : null;
-
+            var customer = await GetCurrentCustomerAsync(ct);
             if (customer is null)
             {
                 return BadRequest(new { message = "Debe completar su perfil de cliente en /api/Customers antes de realizar compras." });
@@ -117,6 +102,24 @@ public class SalesController : ControllerBase
 
         var sale = await _saleService.CreateSaleAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = sale.Id }, sale);
+    }
+
+    private async Task<Customer?> GetCurrentCustomerAsync(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var customer = await _customerRepo.GetByUserIdAsync(userId, ct);
+            if (customer != null) return customer;
+        }
+
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        if (!string.IsNullOrEmpty(userEmail))
+        {
+            return await _customerRepo.GetByEmailAsync(userEmail, ct);
+        }
+
+        return null;
     }
 
     [HttpPut("{id:guid}/cancel")]

@@ -41,6 +41,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.DocumentNumber).IsUnique();
             e.HasIndex(x => x.Email).IsUnique();
+            e.HasIndex(x => x.UserId).IsUnique();
+            e.Property(x => x.UserId).HasMaxLength(450);
             e.Property(x => x.FirstName).HasMaxLength(80);
             e.Property(x => x.LastName).HasMaxLength(80);
             e.Property(x => x.DocumentNumber).HasMaxLength(24);

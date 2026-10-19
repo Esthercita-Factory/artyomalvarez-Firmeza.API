@@ -25,7 +25,7 @@ EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 
 # Crear directorio para almacenamiento de recibos PDF
-RUN mkdir -p /app/wwwroot/recibos
+RUN mkdir -p /app/Storage/recibos
 
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Firmeza.Api.dll"]

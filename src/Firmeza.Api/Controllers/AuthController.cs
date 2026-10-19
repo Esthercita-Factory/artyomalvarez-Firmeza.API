@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Firmeza.Application.Interfaces.Services;
 using Firmeza.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,12 +18,21 @@ public class AuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<AuthController> _logger;
 
-    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config, IWebHostEnvironment env)
+    public AuthController(
+        UserManager<ApplicationUser> userManager,
+        IConfiguration config,
+        IWebHostEnvironment env,
+        IEmailService emailService,
+        ILogger<AuthController> logger)
     {
         _userManager = userManager;
         _config = config;
         _env = env;
+        _emailService = emailService;
+        _logger = logger;
     }
 
     [HttpPost("register")]
@@ -53,6 +63,23 @@ public class AuthController : ControllerBase
 
         await _userManager.AddToRoleAsync(user, "Cliente");
 
+        // Enviar notificación de bienvenida por correo electrónico (S3-T8)
+        try
+        {
+            var subject = "¡Bienvenido/a a Firmeza!";
+            var body = $@"
+                <h2>¡Bienvenido/a a Firmeza!</h2>
+                <p>Tu cuenta ha sido creada exitosamente con el correo: <strong>{user.Email}</strong>.</p>
+                <p>Ya puedes consultar nuestro catálogo de materiales de construcción y cotizar alquiler de flota pesada.</p>
+                <p>Atentamente,<br><strong>Equipo Firmeza</strong></p>";
+
+            await _emailService.SendEmailAsync(user.Email!, subject, body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo despachar el correo de bienvenida a {Email}", user.Email);
+        }
+
         return Ok(new { message = "User registered successfully." });
     }
 
@@ -71,14 +98,7 @@ public class AuthController : ControllerBase
         var configuredKey = _config["Jwt:Key"];
         if (string.IsNullOrWhiteSpace(configuredKey) || configuredKey.Length < 32)
         {
-            if (_env.IsDevelopment())
-            {
-                configuredKey = "FirmezaDevelopmentSecretKeyForJwtTokenGeneration2026!";
-            }
-            else
-            {
-                throw new InvalidOperationException("La clave JWT no está configurada o es demasiado corta (mínimo 32 caracteres).");
-            }
+            throw new InvalidOperationException("La clave JWT no está configurada o es demasiado corta (mínimo 32 caracteres).");
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();

@@ -9,4 +9,6 @@ public interface IExcelService
     Task<ExcelImportResultDto> ImportProductsFromExcelAsync(Stream fileStream, CancellationToken cancellationToken = default);
     Task<ExcelImportResultDto> ImportCustomersFromExcelAsync(Stream fileStream, CancellationToken cancellationToken = default);
     Task<byte[]> ExportSalesToExcelAsync(CancellationToken cancellationToken = default);
+    Task<byte[]> ExportProductsToExcelAsync(CancellationToken cancellationToken = default);
+    Task<byte[]> ExportCustomersToExcelAsync(CancellationToken cancellationToken = default);
 }

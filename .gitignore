@@ -489,3 +489,9 @@ _scalar_screen.*
 *.xwd
 _backup_*/
 
+# Archivos de recibos generados
+wwwroot/recibos/
+Storage/recibos/
+App_Data/recibos/
+*.pdf
+

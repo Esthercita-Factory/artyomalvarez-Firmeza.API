@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Firmeza.Application\Firmeza.Application.csproj" />
     <ProjectReference Include="..\..\src\Firmeza.Domain\Firmeza.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Firmeza.Api\Firmeza.Api.csproj" />
   </ItemGroup>
 
 </Project>

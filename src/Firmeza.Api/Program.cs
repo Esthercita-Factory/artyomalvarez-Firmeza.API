@@ -39,6 +39,7 @@ if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
     {
         throw new InvalidOperationException("La clave 'Jwt:Key' es obligatoria y debe tener al menos 32 caracteres en entornos no-Development.");
     }
+    builder.Configuration["Jwt:Key"] = jwtKey;
 }
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "FirmezaApi";
@@ -92,13 +93,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Habilitar archivos estáticos para la descarga de recibos en wwwroot
-var receiptsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "recibos");
-if (!Directory.Exists(receiptsPath))
-{
-    Directory.CreateDirectory(receiptsPath);
-}
-app.UseStaticFiles();
+// Seguridad de Recibos: NO se sirven como archivos estáticos públicos sin autenticación.
+// La descarga está estrictamente restringida al endpoint autenticado y controlado por IDOR: GET /api/Sales/{id}/receipt
 
 app.UseCors("AllowAngularApp");
 

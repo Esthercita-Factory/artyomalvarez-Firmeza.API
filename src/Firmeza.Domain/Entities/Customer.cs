@@ -19,6 +19,8 @@ public class Customer : BaseEntity
     public string? Address { get; set; }
 
     public int? Age { get; set; }
+    
+    public string? UserId { get; set; }
 
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();
 

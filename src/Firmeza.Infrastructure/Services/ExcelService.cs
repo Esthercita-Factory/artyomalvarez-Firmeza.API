@@ -231,4 +231,84 @@ public class ExcelService : IExcelService
         workbook.SaveAs(stream);
         return stream.ToArray();
     }
+
+    public async Task<byte[]> ExportProductsToExcelAsync(CancellationToken cancellationToken = default)
+    {
+        var products = await _productRepository.GetAllAsync(false, null, null, cancellationToken);
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Productos Firmeza");
+
+        worksheet.Cell(1, 1).Value = "ID";
+        worksheet.Cell(1, 2).Value = "SKU";
+        worksheet.Cell(1, 3).Value = "Nombre";
+        worksheet.Cell(1, 4).Value = "Marca";
+        worksheet.Cell(1, 5).Value = "Categoría";
+        worksheet.Cell(1, 6).Value = "Unidad";
+        worksheet.Cell(1, 7).Value = "Precio Unitario";
+        worksheet.Cell(1, 8).Value = "Stock";
+        worksheet.Cell(1, 9).Value = "Stock Mínimo";
+        worksheet.Cell(1, 10).Value = "Activo";
+        worksheet.Row(1).Style.Font.Bold = true;
+
+        int rowIdx = 2;
+        foreach (var p in products)
+        {
+            worksheet.Cell(rowIdx, 1).Value = p.Id.ToString();
+            worksheet.Cell(rowIdx, 2).Value = p.Sku;
+            worksheet.Cell(rowIdx, 3).Value = p.Name;
+            worksheet.Cell(rowIdx, 4).Value = p.Brand;
+            worksheet.Cell(rowIdx, 5).Value = p.Category;
+            worksheet.Cell(rowIdx, 6).Value = p.UnitOfMeasure;
+            worksheet.Cell(rowIdx, 7).Value = p.UnitPrice;
+            worksheet.Cell(rowIdx, 8).Value = p.Stock;
+            worksheet.Cell(rowIdx, 9).Value = p.MinimumStock;
+            worksheet.Cell(rowIdx, 10).Value = p.IsActive ? "Sí" : "No";
+            rowIdx++;
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    public async Task<byte[]> ExportCustomersToExcelAsync(CancellationToken cancellationToken = default)
+    {
+        var customers = await _customerRepository.GetAllAsync(null, cancellationToken);
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Clientes Firmeza");
+
+        worksheet.Cell(1, 1).Value = "ID";
+        worksheet.Cell(1, 2).Value = "Nombre Completo";
+        worksheet.Cell(1, 3).Value = "Tipo Doc";
+        worksheet.Cell(1, 4).Value = "Número Doc";
+        worksheet.Cell(1, 5).Value = "Correo";
+        worksheet.Cell(1, 6).Value = "Teléfono";
+        worksheet.Cell(1, 7).Value = "Dirección";
+        worksheet.Cell(1, 8).Value = "Edad";
+        worksheet.Row(1).Style.Font.Bold = true;
+
+        int rowIdx = 2;
+        foreach (var c in customers)
+        {
+            worksheet.Cell(rowIdx, 1).Value = c.Id.ToString();
+            worksheet.Cell(rowIdx, 2).Value = $"{c.FirstName} {c.LastName}".Trim();
+            worksheet.Cell(rowIdx, 3).Value = c.DocumentType;
+            worksheet.Cell(rowIdx, 4).Value = c.DocumentNumber;
+            worksheet.Cell(rowIdx, 5).Value = c.Email;
+            worksheet.Cell(rowIdx, 6).Value = c.Phone ?? string.Empty;
+            worksheet.Cell(rowIdx, 7).Value = c.Address ?? string.Empty;
+            worksheet.Cell(rowIdx, 8).Value = c.Age.HasValue ? c.Age.Value.ToString() : string.Empty;
+            rowIdx++;
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
 }

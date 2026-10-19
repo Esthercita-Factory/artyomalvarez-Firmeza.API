@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AutoMapper;
 using Firmeza.Application.DTOs.Customers;
 using Firmeza.Application.Interfaces.Persistence;
+using Firmeza.Application.Interfaces.Services;
 using Firmeza.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,19 +17,31 @@ public class CustomersController : ControllerBase
     private readonly ICustomerRepository _customerRepo;
     private readonly IUnitOfWork _uow;
     private readonly IMapper _mapper;
+    private readonly IPdfService _pdfService;
 
-    public CustomersController(ICustomerRepository customerRepo, IUnitOfWork uow, IMapper mapper)
+    public CustomersController(ICustomerRepository customerRepo, IUnitOfWork uow, IMapper mapper, IPdfService pdfService)
     {
         _customerRepo = customerRepo;
         _uow = uow;
         _mapper = mapper;
+        _pdfService = pdfService;
+    }
+
+    [HttpGet("export-pdf")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> ExportPdf(CancellationToken ct = default)
+    {
+        var customers = await _customerRepo.GetAllAsync(null, ct);
+        var dtos = _mapper.Map<IReadOnlyList<CustomerDto>>(customers);
+        var bytes = await _pdfService.GenerateCustomersReportPdfAsync(dtos, ct);
+        return File(bytes, "application/pdf", $"Directorio-Clientes-Firmeza-{DateTime.UtcNow:yyyyMMddHHmm}.pdf");
     }
 
     [HttpGet]
     [Authorize(Roles = "Administrador")]
-    public async Task<ActionResult<IReadOnlyList<CustomerDto>>> GetAll(CancellationToken ct = default)
+    public async Task<ActionResult<IReadOnlyList<CustomerDto>>> GetAll([FromQuery] string? search = null, CancellationToken ct = default)
     {
-        var customers = await _customerRepo.GetAllAsync(ct);
+        var customers = await _customerRepo.GetAllAsync(search, ct);
         return Ok(_mapper.Map<IReadOnlyList<CustomerDto>>(customers));
     }
 
@@ -36,10 +49,7 @@ public class CustomersController : ControllerBase
     [Authorize(Roles = "Cliente")]
     public async Task<ActionResult<CustomerDto>> GetMyProfile(CancellationToken ct = default)
     {
-        var userEmail = User.FindFirstValue(ClaimTypes.Email);
-        if (string.IsNullOrWhiteSpace(userEmail)) return Unauthorized();
-
-        var customer = await _customerRepo.GetByEmailAsync(userEmail, ct);
+        var customer = await GetCurrentCustomerAsync(ct);
         if (customer is null)
             return NotFound(new { message = "No se encontró un perfil de cliente asociado a su cuenta de usuario." });
 
@@ -53,13 +63,9 @@ public class CustomersController : ControllerBase
         if (customer is null) return NotFound(new { message = $"Cliente con ID {id} no encontrado." });
 
         // Mitigación IDOR: si no es admin, solo puede consultar su propio registro
-        if (!User.IsInRole("Administrador"))
+        if (!User.IsInRole("Administrador") && !IsOwner(customer))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            if (!customer.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
-            {
-                return Forbid();
-            }
+            return Forbid();
         }
 
         return Ok(_mapper.Map<CustomerDto>(customer));
@@ -72,13 +78,9 @@ public class CustomersController : ControllerBase
         if (customer is null) return NotFound(new { message = $"Cliente con documento '{documentNumber}' no encontrado." });
 
         // Mitigación IDOR: un cliente no puede consultar documentos de terceros
-        if (!User.IsInRole("Administrador"))
+        if (!User.IsInRole("Administrador") && !IsOwner(customer))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            if (!customer.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
-            {
-                return Forbid();
-            }
+            return Forbid();
         }
 
         return Ok(_mapper.Map<CustomerDto>(customer));
@@ -87,13 +89,23 @@ public class CustomersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CustomerDto>> Create([FromBody] CreateCustomerDto dto, CancellationToken ct = default)
     {
-        // Si es rol Cliente, forzar que el correo coincida con el usuario autenticado
+        // Si es rol Cliente, vincular al UserId autenticado y validar correo
         if (!User.IsInRole("Administrador"))
         {
             var userEmail = User.FindFirstValue(ClaimTypes.Email);
             if (!string.IsNullOrWhiteSpace(userEmail) && !dto.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(new { message = "El correo del perfil de cliente debe coincidir con su correo de cuenta autenticada." });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var existingProfile = await _customerRepo.GetByUserIdAsync(userId, ct);
+                if (existingProfile != null)
+                {
+                    return BadRequest(new { message = "Ya existe un perfil de cliente asociado a su cuenta de usuario." });
+                }
             }
         }
 
@@ -106,6 +118,11 @@ public class CustomersController : ControllerBase
             return BadRequest(new { message = $"Ya existe un cliente con el correo '{dto.Email}'." });
 
         var customer = _mapper.Map<Customer>(dto);
+        if (!User.IsInRole("Administrador"))
+        {
+            customer.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
         await _customerRepo.AddAsync(customer, ct);
         await _uow.SaveChangesAsync(ct);
 
@@ -120,13 +137,9 @@ public class CustomersController : ControllerBase
         if (customer is null) return NotFound(new { message = $"Cliente con ID {id} no encontrado." });
 
         // Mitigación IDOR: clientes solo modifican su propio perfil
-        if (!User.IsInRole("Administrador"))
+        if (!User.IsInRole("Administrador") && !IsOwner(customer))
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            if (!customer.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
-            {
-                return Forbid();
-            }
+            return Forbid();
         }
 
         _mapper.Map(dto, customer);
@@ -136,6 +149,36 @@ public class CustomersController : ControllerBase
         await _uow.SaveChangesAsync(ct);
 
         return Ok(_mapper.Map<CustomerDto>(customer));
+    }
+
+    private async Task<Customer?> GetCurrentCustomerAsync(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var customer = await _customerRepo.GetByUserIdAsync(userId, ct);
+            if (customer != null) return customer;
+        }
+
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        if (!string.IsNullOrEmpty(userEmail))
+        {
+            return await _customerRepo.GetByEmailAsync(userEmail, ct);
+        }
+
+        return null;
+    }
+
+    private bool IsOwner(Customer customer)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(customer.UserId))
+        {
+            return customer.UserId == userId;
+        }
+
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        return !string.IsNullOrEmpty(userEmail) && customer.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase);
     }
 
     [HttpDelete("{id:guid}")]

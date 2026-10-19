@@ -74,6 +74,49 @@ public class ValidatorTests
     }
 
     [Fact]
+    public void CreateCustomerDtoValidator_WithInvalidPhone_ShouldHaveValidationError()
+    {
+        // Arrange
+        var dto = new CreateCustomerDto
+        {
+            FirstName = "Juan",
+            LastName = "Pérez",
+            DocumentNumber = "123456789",
+            Email = "juan@example.com",
+            Phone = "abc-no-telefono",
+            Age = 30
+        };
+
+        // Act
+        var result = _customerValidator.Validate(dto);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateCustomerDto.Phone));
+    }
+
+    [Fact]
+    public void CreateCustomerDtoValidator_WithValidPhone_ShouldBeValid()
+    {
+        // Arrange
+        var dto = new CreateCustomerDto
+        {
+            FirstName = "Juan",
+            LastName = "Pérez",
+            DocumentNumber = "123456789",
+            Email = "juan@example.com",
+            Phone = "+57 300 1234567",
+            Age = 30
+        };
+
+        // Act
+        var result = _customerValidator.Validate(dto);
+
+        // Assert
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
     public void CreateSaleDtoValidator_WithEmptyItemsList_ShouldHaveValidationError()
     {
         // Arrange
