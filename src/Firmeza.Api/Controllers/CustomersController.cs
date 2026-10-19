@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AutoMapper;
 using Firmeza.Application.DTOs.Customers;
 using Firmeza.Application.Interfaces.Persistence;
+using Firmeza.Application.Interfaces.Services;
 using Firmeza.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +17,24 @@ public class CustomersController : ControllerBase
     private readonly ICustomerRepository _customerRepo;
     private readonly IUnitOfWork _uow;
     private readonly IMapper _mapper;
+    private readonly IPdfService _pdfService;
 
-    public CustomersController(ICustomerRepository customerRepo, IUnitOfWork uow, IMapper mapper)
+    public CustomersController(ICustomerRepository customerRepo, IUnitOfWork uow, IMapper mapper, IPdfService pdfService)
     {
         _customerRepo = customerRepo;
         _uow = uow;
         _mapper = mapper;
+        _pdfService = pdfService;
+    }
+
+    [HttpGet("export-pdf")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> ExportPdf(CancellationToken ct = default)
+    {
+        var customers = await _customerRepo.GetAllAsync(null, ct);
+        var dtos = _mapper.Map<IReadOnlyList<CustomerDto>>(customers);
+        var bytes = await _pdfService.GenerateCustomersReportPdfAsync(dtos, ct);
+        return File(bytes, "application/pdf", $"Directorio-Clientes-Firmeza-{DateTime.UtcNow:yyyyMMddHHmm}.pdf");
     }
 
     [HttpGet]

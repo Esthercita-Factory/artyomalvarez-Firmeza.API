@@ -1,3 +1,5 @@
+using Firmeza.Application.DTOs.Customers;
+using Firmeza.Application.DTOs.Products;
 using Firmeza.Application.DTOs.Sales;
 using Firmeza.Application.Interfaces.Services;
 using QuestPDF.Fluent;
@@ -109,6 +111,134 @@ public class PdfService : IPdfService
                 {
                     t.Span("Gracias por confiar en Firmeza. Documento generado automáticamente por el sistema.");
                     t.Span(" | Página ");
+                    t.CurrentPageNumber();
+                });
+            });
+        });
+
+        return Task.FromResult(document.GeneratePdf());
+    }
+
+    public Task<byte[]> GenerateProductsCatalogPdfAsync(IReadOnlyList<ProductDto> products, CancellationToken cancellationToken = default)
+    {
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.5f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(9).FontColor(Colors.Grey.Darken3));
+
+                page.Header().Row(row =>
+                {
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text("FIRMEZA — CATÁLOGO OFICIAL DE MATERIALES").FontSize(16).Bold().FontColor(Colors.Blue.Darken3);
+                        col.Item().Text($"Generado: {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC | Total referencias: {products.Count}").FontSize(8).FontColor(Colors.Grey.Medium);
+                    });
+                });
+
+                page.Content().PaddingVertical(1, Unit.Centimetre).Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.ConstantColumn(80);  // SKU
+                        columns.RelativeColumn(3);   // Nombre
+                        columns.RelativeColumn(2);   // Marca
+                        columns.RelativeColumn(2);   // Categoría
+                        columns.RelativeColumn(1);   // Unidad
+                        columns.RelativeColumn(2);   // Precio
+                        columns.RelativeColumn(1);   // Stock
+                    });
+
+                    table.Header(header =>
+                    {
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("SKU").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Nombre").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Marca").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Categoría").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Unidad").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Precio").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Stock").FontColor(Colors.White).Bold();
+                    });
+
+                    foreach (var p in products)
+                    {
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(p.Sku);
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(p.Name);
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(p.Brand);
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(p.Category);
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(p.UnitOfMeasure);
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text($"${p.UnitPrice:N2}");
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(p.Stock.ToString());
+                    }
+                });
+
+                page.Footer().AlignCenter().Text(t =>
+                {
+                    t.Span("Firmeza S.A.S. — Reporte de Catálogo | Página ");
+                    t.CurrentPageNumber();
+                });
+            });
+        });
+
+        return Task.FromResult(document.GeneratePdf());
+    }
+
+    public Task<byte[]> GenerateCustomersReportPdfAsync(IReadOnlyList<CustomerDto> customers, CancellationToken cancellationToken = default)
+    {
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.5f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(9).FontColor(Colors.Grey.Darken3));
+
+                page.Header().Row(row =>
+                {
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text("FIRMEZA — DIRECTORIO CORPORATIVO DE CLIENTES").FontSize(16).Bold().FontColor(Colors.Blue.Darken3);
+                        col.Item().Text($"Generado: {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC | Total clientes: {customers.Count}").FontSize(8).FontColor(Colors.Grey.Medium);
+                    });
+                });
+
+                page.Content().PaddingVertical(1, Unit.Centimetre).Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.ConstantColumn(80);  // Documento
+                        columns.RelativeColumn(3);   // Nombre
+                        columns.RelativeColumn(3);   // Correo
+                        columns.RelativeColumn(2);   // Teléfono
+                        columns.RelativeColumn(3);   // Dirección
+                    });
+
+                    table.Header(header =>
+                    {
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Doc. Identidad").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Nombre Completo").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Correo").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Teléfono").FontColor(Colors.White).Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(4).Text("Dirección").FontColor(Colors.White).Bold();
+                    });
+
+                    foreach (var c in customers)
+                    {
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text($"{c.DocumentType} {c.DocumentNumber}");
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text($"{c.FirstName} {c.LastName}".Trim());
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(c.Email);
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(c.Phone ?? "-");
+                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(c.Address ?? "-");
+                    }
+                });
+
+                page.Footer().AlignCenter().Text(t =>
+                {
+                    t.Span("Firmeza S.A.S. — Directorio de Clientes | Página ");
                     t.CurrentPageNumber();
                 });
             });

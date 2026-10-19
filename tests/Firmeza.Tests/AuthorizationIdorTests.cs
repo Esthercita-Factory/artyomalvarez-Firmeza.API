@@ -20,6 +20,7 @@ public class AuthorizationIdorTests
     private readonly Mock<ICustomerRepository> _mockCustomerRepo;
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<IMapper> _mockMapper;
+    private readonly Mock<IPdfService> _mockPdfService;
 
     public AuthorizationIdorTests()
     {
@@ -27,6 +28,7 @@ public class AuthorizationIdorTests
         _mockCustomerRepo = new Mock<ICustomerRepository>();
         _mockUow = new Mock<IUnitOfWork>();
         _mockMapper = new Mock<IMapper>();
+        _mockPdfService = new Mock<IPdfService>();
     }
 
     private static ControllerContext CreateContextForUser(string userId, string email, string role)
@@ -173,7 +175,7 @@ public class AuthorizationIdorTests
         _mockCustomerRepo.Setup(r => r.GetByIdAsync(customerAId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(customerA);
 
-        var controller = new CustomersController(_mockCustomerRepo.Object, _mockUow.Object, _mockMapper.Object)
+        var controller = new CustomersController(_mockCustomerRepo.Object, _mockUow.Object, _mockMapper.Object, _mockPdfService.Object)
         {
             ControllerContext = CreateContextForUser("user-b-guid", "clienteB@test.com", "Cliente")
         };

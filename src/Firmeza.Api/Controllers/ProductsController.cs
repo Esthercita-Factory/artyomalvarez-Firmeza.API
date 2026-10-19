@@ -1,6 +1,7 @@
 using AutoMapper;
 using Firmeza.Application.DTOs.Products;
 using Firmeza.Application.Interfaces.Persistence;
+using Firmeza.Application.Interfaces.Services;
 using Firmeza.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,12 +16,24 @@ public class ProductsController : ControllerBase
     private readonly IProductRepository _productRepo;
     private readonly IUnitOfWork _uow;
     private readonly IMapper _mapper;
+    private readonly IPdfService _pdfService;
 
-    public ProductsController(IProductRepository productRepo, IUnitOfWork uow, IMapper mapper)
+    public ProductsController(IProductRepository productRepo, IUnitOfWork uow, IMapper mapper, IPdfService pdfService)
     {
         _productRepo = productRepo;
         _uow = uow;
         _mapper = mapper;
+        _pdfService = pdfService;
+    }
+
+    [HttpGet("export-pdf")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> ExportPdf([FromQuery] bool onlyActive = false, CancellationToken ct = default)
+    {
+        var products = await _productRepo.GetAllAsync(onlyActive, null, null, ct);
+        var dtos = _mapper.Map<IReadOnlyList<ProductDto>>(products);
+        var bytes = await _pdfService.GenerateProductsCatalogPdfAsync(dtos, ct);
+        return File(bytes, "application/pdf", $"Catalogo-Materiales-Firmeza-{DateTime.UtcNow:yyyyMMddHHmm}.pdf");
     }
 
     [HttpGet]

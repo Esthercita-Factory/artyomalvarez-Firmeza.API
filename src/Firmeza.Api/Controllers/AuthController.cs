@@ -98,14 +98,7 @@ public class AuthController : ControllerBase
         var configuredKey = _config["Jwt:Key"];
         if (string.IsNullOrWhiteSpace(configuredKey) || configuredKey.Length < 32)
         {
-            if (_env.IsDevelopment())
-            {
-                configuredKey = "FirmezaDevelopmentSecretKeyForJwtTokenGeneration2026!";
-            }
-            else
-            {
-                throw new InvalidOperationException("La clave JWT no está configurada o es demasiado corta (mínimo 32 caracteres).");
-            }
+            throw new InvalidOperationException("La clave JWT no está configurada o es demasiado corta (mínimo 32 caracteres).");
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();

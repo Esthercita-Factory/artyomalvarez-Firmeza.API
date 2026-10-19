@@ -39,6 +39,7 @@ if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
     {
         throw new InvalidOperationException("La clave 'Jwt:Key' es obligatoria y debe tener al menos 32 caracteres en entornos no-Development.");
     }
+    builder.Configuration["Jwt:Key"] = jwtKey;
 }
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "FirmezaApi";

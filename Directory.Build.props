@@ -1,5 +1,5 @@
 <Project>
-  <PropertyGroup>
-    <!-- Las advertencias de seguridad deben atenderse por paquete puntual y no suprimirse globalmente. -->
-  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+  </ItemGroup>
 </Project>
