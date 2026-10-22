@@ -219,44 +219,72 @@ Firmeza.API/
 
 ---
 
-## Instrucciones de Configuración y Ejecución
+## Requisitos del Sistema
+- **.NET 10 SDK** (o versión 10.0+)
+- **Node.js 20+** y **npm**
+- **PostgreSQL 15/16** o instancia activa en **Supabase** (IPv4 Session Pooler)
 
-### 1. Clonar el repositorio
+---
+
+## Configuración y Ejecución Local (Sin Docker)
+
+### 1. Backend Web API (.NET 10)
+1. Copiar la plantilla de configuración:
+   ```bash
+   cp src/Firmeza.Api/appsettings.Development.json.example src/Firmeza.Api/appsettings.Development.json
+   ```
+2. Completar la cadena de conexión a PostgreSQL en `src/Firmeza.Api/appsettings.Development.json`.
+3. Aplicar migraciones pendientes (si se usa una base de datos nueva):
+   ```bash
+   dotnet ef database update --project src/Firmeza.Infrastructure --startup-project src/Firmeza.Api
+   ```
+4. Iniciar la API:
+   ```bash
+   cd src/Firmeza.Api
+   dotnet run --launch-profile http
+   ```
+   * **URL de la API:** `http://localhost:5054`
+   * **Documentación interactiva Scalar:** `http://localhost:5054/scalar/v1`
+
+---
+
+### 2. Frontend SPA (Angular 20 Standalone)
+1. Abrir una nueva terminal e instalar dependencias:
+   ```bash
+   cd artyomalvarez-Firmeza.Web
+   npm install
+   ```
+2. Iniciar el servidor de desarrollo:
+   ```bash
+   npm start
+   ```
+   * **URL del Portal Web:** `http://localhost:4200`
+
+---
+
+## Usuarios de Prueba Preconfigurados
+- **Administrador del Sistema:**
+  * Correo: `admin@firmeza.com`
+  * Contraseña: `Admin123*Password`
+  * Acceso al panel administrativo: `http://localhost:4200/admin`
+- **Cliente Corporativo:**
+  * Correo: `cliente@firmeza.com`
+  * Contraseña: `Cliente2026*`
+  * También es posible registrar clientes nuevos directamente desde `http://localhost:4200/registro`.
+
+---
+
+## Pruebas Unitarias Automatizadas (xUnit)
+Para compilar y ejecutar las 29 pruebas unitarias de lógica de negocio:
 ```bash
-git clone git@github.com:Esthercita-Factory/artyomalvarez-Firmeza.API.git
-cd artyomalvarez-Firmeza.API
+dotnet test
 ```
 
-### 2. Configurar Secretos de Usuario (.NET User-Secrets)
-Configurar la cadena de conexión a PostgreSQL y la contraseña del administrador en el almacén seguro de .NET:
+---
 
+## Despliegue con Docker (Opcional)
+Los archivos de containerización (`Dockerfile`, `Dockerfile.tests`, `nginx.conf`, `.dockerignore` y `docker-compose.yml`) se encuentran completamente estructurados y verificados a nivel de configuración para su orquestación en equipos con Docker disponible:
 ```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=aws-0-us-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.tu_usuario;Password=tu_contraseña;SSL Mode=Require;Trust Server Certificate=true" --project src/Firmeza.Api
-dotnet user-secrets set "AdminUser:Password" "TuClaveSeguraAdmin2026!" --project src/Firmeza.Api
-dotnet user-secrets set "Jwt:Key" "ClaveSuperSeguraDeAlMenos32CaracteresParaProduccion!" --project src/Firmeza.Api
-```
-
-### 3. Compilar y Ejecutar Pruebas Unitarias
-```bash
-dotnet build
-dotnet test --logger "console;verbosity=normal"
-```
-
-### 4. Ejecución Local con Docker y Docker Compose
-Para compilar y ejecutar todo el entorno (ejecutando las pruebas primero antes de iniciar la API):
-
-```bash
-# Ejecutar suite completa con docker compose
 docker compose up --build
 ```
-
-O para ejecutar solo el contenedor de pruebas unitarias:
-```bash
-docker build -f Dockerfile.tests -t firmeza-tests .
-docker run --rm firmeza-tests
-```
-
-### 5. Documentación Interactiva de la API
-Con la aplicación en ejecución en modo de desarrollo, la documentación interactiva con soporte Bearer Token se encuentra disponible en:
-- Scalar API Reference: `http://localhost:5000/scalar/v1`
-- OpenAPI Specification: `http://localhost:5000/openapi/v1.json`
+> *Nota:* La suite de pruebas `tests` actúa como compuerta de calidad (`condition: service_completed_successfully`), garantizando que la API y el cliente solo inicien si todas las pruebas pasan.

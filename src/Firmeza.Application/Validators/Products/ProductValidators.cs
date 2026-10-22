@@ -20,7 +20,6 @@ public class CreateProductDtoValidator : AbstractValidator<CreateProductDto>
             .MaximumLength(100).WithMessage("La marca no debe superar 100 caracteres.");
 
         RuleFor(x => x.Category)
-            .NotEmpty().WithMessage("La categoría es obligatoria.")
             .MaximumLength(100).WithMessage("La categoría no debe superar 100 caracteres.");
 
         RuleFor(x => x.UnitPrice)
@@ -47,7 +46,6 @@ public class UpdateProductDtoValidator : AbstractValidator<UpdateProductDto>
             .MaximumLength(100).WithMessage("La marca no debe superar 100 caracteres.");
 
         RuleFor(x => x.Category)
-            .NotEmpty().WithMessage("La categoría es obligatoria.")
             .MaximumLength(100).WithMessage("La categoría no debe superar 100 caracteres.");
 
         RuleFor(x => x.UnitPrice)

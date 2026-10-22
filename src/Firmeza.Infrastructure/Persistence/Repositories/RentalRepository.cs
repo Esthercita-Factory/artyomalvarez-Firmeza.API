@@ -45,6 +45,9 @@ public class RentalRepository : IRentalRepository
 
     public async Task<bool> HasOverlappingRentalAsync(Guid vehicleId, DateTime startDate, DateTime endDate, Guid? excludeRentalId = null, CancellationToken cancellationToken = default)
     {
+        var startUtc = startDate.Kind == DateTimeKind.Utc ? startDate : DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+        var endUtc = endDate.Kind == DateTimeKind.Utc ? endDate : DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
+
         var query = _context.Rentals.Where(r => r.VehicleId == vehicleId && r.Status != RentalStatus.Cancelled && r.Status != RentalStatus.Completed);
 
         if (excludeRentalId.HasValue)
@@ -52,7 +55,7 @@ public class RentalRepository : IRentalRepository
             query = query.Where(r => r.Id != excludeRentalId.Value);
         }
 
-        return await query.AnyAsync(r => r.StartDate < endDate && r.EndDate > startDate, cancellationToken);
+        return await query.AnyAsync(r => r.StartDate < endUtc && r.EndDate > startUtc, cancellationToken);
     }
 
     public async Task<decimal> GetTotalRentalsRevenueAsync(CancellationToken cancellationToken = default)

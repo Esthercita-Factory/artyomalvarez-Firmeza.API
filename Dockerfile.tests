@@ -14,8 +14,11 @@ COPY ["tests/Firmeza.Tests/Firmeza.Tests.csproj", "tests/Firmeza.Tests/"]
 # Restaurar todas las dependencias
 RUN dotnet restore "Firmeza.sln"
 
-# Copiar código fuente y suite de pruebas
+# Copiar código fuente limpio (respetando .dockerignore)
 COPY . .
 
-# Ejecutar pruebas (si alguna falla, el build o la ejecución retornará código != 0)
-ENTRYPOINT ["dotnet", "test", "tests/Firmeza.Tests/Firmeza.Tests.csproj", "-c", "Release", "--logger:console;verbosity=normal", "--no-restore"]
+# Compilar todo en Release
+RUN dotnet build -c Release --no-restore "Firmeza.sln"
+
+# Ejecutar pruebas con salida estricta (si alguna falla, el proceso retorna código != 0)
+ENTRYPOINT ["dotnet", "test", "tests/Firmeza.Tests/Firmeza.Tests.csproj", "-c", "Release", "--no-build", "--logger:console;verbosity=normal"]

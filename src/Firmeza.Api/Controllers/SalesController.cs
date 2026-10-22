@@ -99,6 +99,10 @@ public class SalesController : ControllerBase
 
             dto.CustomerId = customer.Id;
         }
+        else if (dto.CustomerId == Guid.Empty)
+        {
+            return BadRequest(new { message = "El cliente es obligatorio para registrar una venta como Administrador." });
+        }
 
         var sale = await _saleService.CreateSaleAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = sale.Id }, sale);

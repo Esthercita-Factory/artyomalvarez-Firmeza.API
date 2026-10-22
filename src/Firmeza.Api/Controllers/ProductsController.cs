@@ -38,22 +38,51 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetAll(
+    public async Task<IActionResult> GetAll(
         [FromQuery] bool onlyActive = true,
         [FromQuery] string? search = null,
         [FromQuery] string? category = null,
+        [FromQuery] string? status = null,
+        [FromQuery] bool? lowStock = null,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null,
         CancellationToken ct = default)
     {
-        var products = await _productRepo.GetAllAsync(onlyActive, search, category, ct);
-        return Ok(_mapper.Map<IReadOnlyList<ProductDto>>(products));
+        var (products, totalCount) = await _productRepo.GetPagedAsync(
+            onlyActive, search, category, status, lowStock, page, pageSize, ct);
+
+        var dtos = _mapper.Map<IReadOnlyList<ProductDto>>(products);
+        Response.Headers.Append("X-Total-Count", totalCount.ToString());
+
+        if (page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0)
+        {
+            return Ok(new
+            {
+                items = dtos,
+                totalCount,
+                page = page.Value,
+                pageSize = pageSize.Value,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize.Value)
+            });
+        }
+
+        return Ok(dtos);
     }
 
     [HttpGet("low-stock")]
-    [Authorize(Roles = "Administrador")]
+    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetLowStock(CancellationToken ct = default)
     {
         var products = await _productRepo.GetLowStockAsync(ct);
         return Ok(_mapper.Map<IReadOnlyList<ProductDto>>(products));
+    }
+
+    [HttpGet("low-stock/count")]
+    [AllowAnonymous]
+    public async Task<ActionResult<object>> GetLowStockCount(CancellationToken ct = default)
+    {
+        var count = await _productRepo.GetLowStockCountAsync(ct);
+        return Ok(new { count });
     }
 
     [HttpGet("{id:guid}")]
@@ -73,6 +102,9 @@ public class ProductsController : ControllerBase
         if (existing is not null)
             return BadRequest(new { message = $"Ya existe un producto con el SKU '{dto.Sku}'." });
 
+        if (string.IsNullOrWhiteSpace(dto.Category))
+            dto.Category = "General";
+
         var product = _mapper.Map<Product>(dto);
         await _productRepo.AddAsync(product, ct);
         await _uow.SaveChangesAsync(ct);
@@ -87,6 +119,9 @@ public class ProductsController : ControllerBase
     {
         var product = await _productRepo.GetByIdAsync(id, ct);
         if (product is null) return NotFound(new { message = $"Producto con ID {id} no encontrado." });
+
+        if (string.IsNullOrWhiteSpace(dto.Category))
+            dto.Category = product.Category ?? "General";
 
         _mapper.Map(dto, product);
         product.UpdatedAtUtc = DateTime.UtcNow;

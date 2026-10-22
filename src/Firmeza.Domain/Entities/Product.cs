@@ -23,4 +23,9 @@ public class Product : BaseEntity
     public int MinimumStock { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Regla única de negocio: Un producto está en stock bajo si está activo y su stock es menor o igual al mínimo.
+    /// </summary>
+    public bool IsLowStock => IsActive && Stock <= MinimumStock;
 }

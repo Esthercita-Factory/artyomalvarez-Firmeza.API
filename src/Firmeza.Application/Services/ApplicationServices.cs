@@ -268,6 +268,9 @@ public class RentalService : IRentalService
 
     public async Task<RentalDto> CreateRentalAsync(CreateRentalDto dto, CancellationToken cancellationToken = default)
     {
+        var startUtc = dto.StartDate.Kind == DateTimeKind.Utc ? dto.StartDate : DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        var endUtc = dto.EndDate.Kind == DateTimeKind.Utc ? dto.EndDate : DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
         var customer = await _customerRepository.GetByIdAsync(dto.CustomerId, cancellationToken)
             ?? throw new NotFoundException($"El cliente con ID {dto.CustomerId} no existe.");
 
@@ -279,20 +282,20 @@ public class RentalService : IRentalService
             throw new ValidationException($"El vehículo '{vehicle.Brand} {vehicle.Model}' no se encuentra disponible (Estado: {vehicle.Status}).");
         }
 
-        var hasCollision = await _rentalRepository.HasOverlappingRentalAsync(dto.VehicleId, dto.StartDate, dto.EndDate, null, cancellationToken);
+        var hasCollision = await _rentalRepository.HasOverlappingRentalAsync(dto.VehicleId, startUtc, endUtc, null, cancellationToken);
         if (hasCollision)
         {
             throw new ValidationException("El vehículo ya tiene una reserva en el rango de fechas seleccionado.");
         }
 
-        var quote = await CalculateRentalQuoteAsync(dto.VehicleId, dto.StartDate, dto.EndDate, 0.19m, cancellationToken);
+        var quote = await CalculateRentalQuoteAsync(dto.VehicleId, startUtc, endUtc, 0.19m, cancellationToken);
 
         var rental = new Rental
         {
             CustomerId = customer.Id,
             VehicleId = vehicle.Id,
-            StartDate = dto.StartDate,
-            EndDate = dto.EndDate,
+            StartDate = startUtc,
+            EndDate = endUtc,
             DaysRented = quote.DaysRented,
             DailyRate = quote.DailyRate,
             Subtotal = quote.Subtotal,
