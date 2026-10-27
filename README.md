@@ -208,44 +208,65 @@ Firmeza.API/
 
 ---
 
-## Instrucciones de Configuración y Ejecución
+## Requisitos del Sistema
+- **.NET 10 SDK**
+- **Node.js 20+** y **npm**
 
-### 1. Clonar el repositorio
+---
+
+## 🚀 Cómo Ejecutar la Solución (Listo para Probar)
+
+El proyecto viene completamente preconfigurado con conexión activa a PostgreSQL en la nube (Supabase), por lo que **no requiere instalar base de datos local ni configurar archivos**.
+
+### Paso 1: Iniciar la API (.NET 10)
+Abre una terminal en la raíz de la carpeta y ejecuta:
 ```bash
-git clone git@github.com:Esthercita-Factory/artyomalvarez-Firmeza.API.git
-cd artyomalvarez-Firmeza.API
+dotnet run --project src/Firmeza.Api --launch-profile http
+```
+* **API Web en ejecución:** `http://localhost:5054`
+* **Documentación interactiva Scalar:** `http://localhost:5054/scalar/v1`
+* **Swagger OpenAPI:** `http://localhost:5054/openapi/v1.json`
+
+---
+
+### Paso 2: Iniciar el Frontend (Angular 20)
+Abre una segunda terminal y ejecuta:
+```bash
+cd Firmeza.Client
+npm install
+npm start
+```
+* **Aplicación Web en el navegador:** `http://localhost:4200`
+
+---
+
+## 🔑 Usuarios de Prueba
+
+| Rol | Correo | Contraseña | Acceso |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@firmeza.com` | `Admin123*Password` | Ingreso en `/login` o botón **"Panel Admin"** (`/admin`) |
+| **Cliente** | `cliente@firmeza.com` | `Cliente2026*` | Ingreso en `/login` o registro en `/registro` |
+
+---
+
+## 💡 Nota de Arquitectura: Módulo Administrativo (`Firmeza.Admin`)
+Por acuerdo arquitectónico documentado en los lineamientos técnicos del proyecto, el módulo administrativo base no se implementó en páginas monolíticas Razor (`.cshtml`), sino desacoplado dentro de una arquitectura cliente-servidor moderna:
+* **Frontend:** Se integró dentro de la SPA en Angular (`Firmeza.Client`) bajo la ruta protegida `/admin/*` con `adminGuard`, protegiendo el acceso exclusivo para usuarios con rol `Administrador`.
+* **Backend Web API:** Expone los controladores administrativos completos (`/api/Dashboard/metrics`, `/api/Products`, `/api/Customers`, `/api/Sales`, `/api/Rentals`, `/api/Excel`) consumidos mediante peticiones RESTful autenticadas con Bearer JWT.
+
+---
+
+## 🧪 Pruebas Unitarias Automatizadas (xUnit)
+Para ejecutar la suite de 29 pruebas unitarias de lógica de negocio (IVA, inventario, cotizaciones, seguridad):
+```bash
+dotnet test
 ```
 
-### 2. Configurar Secretos de Usuario (.NET User-Secrets)
-Configurar la cadena de conexión a PostgreSQL y la contraseña del administrador en el almacén seguro de .NET:
+---
 
+## 🐳 Docker (Opcional)
+Si se desea ejecutar en un servidor con Docker disponible:
 ```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=aws-0-us-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.tu_usuario;Password=tu_contraseña;SSL Mode=Require;Trust Server Certificate=true" --project src/Firmeza.Api
-dotnet user-secrets set "AdminUser:Password" "TuClaveSeguraAdmin2026!" --project src/Firmeza.Api
-dotnet user-secrets set "Jwt:Key" "ClaveSuperSeguraDeAlMenos32CaracteresParaProduccion!" --project src/Firmeza.Api
-```
-
-### 3. Compilar y Ejecutar Pruebas Unitarias
-```bash
-dotnet build
-dotnet test --logger "console;verbosity=normal"
-```
-
-### 4. Ejecución Local con Docker y Docker Compose
-Para compilar y ejecutar todo el entorno (ejecutando las pruebas primero antes de iniciar la API):
-
-```bash
-# Ejecutar suite completa con docker compose
 docker compose up --build
 ```
-
-O para ejecutar solo el contenedor de pruebas unitarias:
-```bash
-docker build -f Dockerfile.tests -t firmeza-tests .
-docker run --rm firmeza-tests
-```
-
-### 5. Documentación Interactiva de la API
-Con la aplicación en ejecución en modo de desarrollo, la documentación interactiva con soporte Bearer Token se encuentra disponible en:
-- Scalar API Reference: `http://localhost:5000/scalar/v1`
-- OpenAPI Specification: `http://localhost:5000/openapi/v1.json`
+*(Los archivos Dockerfile, Dockerfile.tests, nginx.conf y docker-compose.yml ya están incluidos y configurados).*

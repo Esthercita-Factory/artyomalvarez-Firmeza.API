@@ -1,0 +1,12 @@
+**/.git
+**/.vs
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/TestResults
+**/dist
+**/node_modules
+appsettings.Development.json
+appsettings.Local.json
+.env

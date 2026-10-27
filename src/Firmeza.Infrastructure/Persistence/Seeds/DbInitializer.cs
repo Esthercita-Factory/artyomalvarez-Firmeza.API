@@ -62,4 +62,9 @@ public static class DbInitializer
             }
         }
     }
+
+    public static async Task SeedAllAsync(IServiceProvider serviceProvider, IConfiguration configuration)
+    {
+        await DataSeeder.SeedAsync(serviceProvider, configuration);
+    }
 }

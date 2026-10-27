@@ -7,8 +7,8 @@ public class CreateSaleDtoValidator : AbstractValidator<CreateSaleDto>
 {
     public CreateSaleDtoValidator()
     {
-        RuleFor(x => x.CustomerId)
-            .NotEmpty().WithMessage("El cliente es obligatorio.");
+        // NOTA: CustomerId es opcional para el rol Cliente (se infiere de forma segura del JWT en SalesController
+        // para prevenir vulnerabilidades IDOR). Para administradores, se valida en el controlador si no se proporciona.
 
         RuleFor(x => x.TaxRate)
             .InclusiveBetween(0m, 1m).WithMessage("La tasa de impuesto debe estar entre 0% y 100%.");

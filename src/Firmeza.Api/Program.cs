@@ -101,10 +101,30 @@ app.UseCors("AllowAngularApp");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Inicializar roles y admin por defecto solo en desarrollo o si está explícitamente activado por configuración
+// Aplicar migraciones automáticamente en arranque (soporte para Docker / entornos nuevos)
+using (var migrationScope = app.Services.CreateScope())
+{
+    var dbContext = migrationScope.ServiceProvider.GetRequiredService<Firmeza.Infrastructure.Persistence.ApplicationDbContext>();
+    var logger = migrationScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        if (app.Configuration.GetValue<bool>("ApplyMigrationsOnStartup", true))
+        {
+            logger.LogInformation("Aplicando migraciones pendientes de EF Core automáticamente...");
+            await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync(dbContext.Database);
+            logger.LogInformation("Migraciones aplicadas o base de datos al día.");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error al aplicar migraciones automáticas al arrancar.");
+    }
+}
+
+// Inicializar roles y datos semilla completos solo en desarrollo o si está explícitamente activado por configuración
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("SeedData:Enabled", false))
 {
-    await Firmeza.Infrastructure.Persistence.Seeds.DbInitializer.SeedRolesAndAdminAsync(app.Services, app.Configuration);
+    await Firmeza.Infrastructure.Persistence.Seeds.DbInitializer.SeedAllAsync(app.Services, app.Configuration);
 }
 
 app.MapControllers();
