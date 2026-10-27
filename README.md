@@ -220,71 +220,64 @@ Firmeza.API/
 ---
 
 ## Requisitos del Sistema
-- **.NET 10 SDK** (o versión 10.0+)
+- **.NET 10 SDK**
 - **Node.js 20+** y **npm**
-- **PostgreSQL 15/16** o instancia activa en **Supabase** (IPv4 Session Pooler)
 
 ---
 
-## Configuración y Ejecución Local (Sin Docker)
+## 🚀 Cómo Ejecutar la Solución (Listo para Probar)
 
-### 1. Backend Web API (.NET 10)
-1. Copiar la plantilla de configuración:
-   ```bash
-   cp src/Firmeza.Api/appsettings.Development.json.example src/Firmeza.Api/appsettings.Development.json
-   ```
-2. Completar la cadena de conexión a PostgreSQL en `src/Firmeza.Api/appsettings.Development.json`.
-3. Aplicar migraciones pendientes (si se usa una base de datos nueva):
-   ```bash
-   dotnet ef database update --project src/Firmeza.Infrastructure --startup-project src/Firmeza.Api
-   ```
-4. Iniciar la API:
-   ```bash
-   cd src/Firmeza.Api
-   dotnet run --launch-profile http
-   ```
-   * **URL de la API:** `http://localhost:5054`
-   * **Documentación interactiva Scalar:** `http://localhost:5054/scalar/v1`
+El proyecto viene completamente preconfigurado con conexión activa a PostgreSQL en la nube (Supabase), por lo que **no requiere instalar base de datos local ni configurar archivos**.
+
+### Paso 1: Iniciar la API (.NET 10)
+Abre una terminal en la raíz de la carpeta y ejecuta:
+```bash
+dotnet run --project src/Firmeza.Api --launch-profile http
+```
+* **API Web en ejecución:** `http://localhost:5054`
+* **Documentación interactiva Scalar:** `http://localhost:5054/scalar/v1`
+* **Swagger OpenAPI:** `http://localhost:5054/openapi/v1.json`
 
 ---
 
-### 2. Frontend SPA (Angular 20 Standalone)
-1. Abrir una nueva terminal e instalar dependencias:
-   ```bash
-   cd artyomalvarez-Firmeza.Web
-   npm install
-   ```
-2. Iniciar el servidor de desarrollo:
-   ```bash
-   npm start
-   ```
-   * **URL del Portal Web:** `http://localhost:4200`
+### Paso 2: Iniciar el Frontend (Angular 20)
+Abre una segunda terminal y ejecuta:
+```bash
+cd Firmeza.Client
+npm install
+npm start
+```
+* **Aplicación Web en el navegador:** `http://localhost:4200`
 
 ---
 
-## Usuarios de Prueba Preconfigurados
-- **Administrador del Sistema:**
-  * Correo: `admin@firmeza.com`
-  * Contraseña: `Admin123*Password`
-  * Acceso al panel administrativo: `http://localhost:4200/admin`
-- **Cliente Corporativo:**
-  * Correo: `cliente@firmeza.com`
-  * Contraseña: `Cliente2026*`
-  * También es posible registrar clientes nuevos directamente desde `http://localhost:4200/registro`.
+## 🔑 Usuarios de Prueba
+
+| Rol | Correo | Contraseña | Acceso |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@firmeza.com` | `Admin123*Password` | Ingreso en `/login` o botón **"Panel Admin"** (`/admin`) |
+| **Cliente** | `cliente@firmeza.com` | `Cliente2026*` | Ingreso en `/login` o registro en `/registro` |
 
 ---
 
-## Pruebas Unitarias Automatizadas (xUnit)
-Para compilar y ejecutar las 29 pruebas unitarias de lógica de negocio:
+## 💡 Nota de Arquitectura: Módulo Administrativo (`Firmeza.Admin`)
+Por acuerdo arquitectónico documentado en los lineamientos técnicos del proyecto, el módulo administrativo base no se implementó en páginas monolíticas Razor (`.cshtml`), sino desacoplado dentro de una arquitectura cliente-servidor moderna:
+* **Frontend:** Se integró dentro de la SPA en Angular (`Firmeza.Client`) bajo la ruta protegida `/admin/*` con `adminGuard`, protegiendo el acceso exclusivo para usuarios con rol `Administrador`.
+* **Backend Web API:** Expone los controladores administrativos completos (`/api/Dashboard/metrics`, `/api/Products`, `/api/Customers`, `/api/Sales`, `/api/Rentals`, `/api/Excel`) consumidos mediante peticiones RESTful autenticadas con Bearer JWT.
+
+---
+
+## 🧪 Pruebas Unitarias Automatizadas (xUnit)
+Para ejecutar la suite de 29 pruebas unitarias de lógica de negocio (IVA, inventario, cotizaciones, seguridad):
 ```bash
 dotnet test
 ```
 
 ---
 
-## Despliegue con Docker (Opcional)
-Los archivos de containerización (`Dockerfile`, `Dockerfile.tests`, `nginx.conf`, `.dockerignore` y `docker-compose.yml`) se encuentran completamente estructurados y verificados a nivel de configuración para su orquestación en equipos con Docker disponible:
+## 🐳 Docker (Opcional)
+Si se desea ejecutar en un servidor con Docker disponible:
 ```bash
 docker compose up --build
 ```
-> *Nota:* La suite de pruebas `tests` actúa como compuerta de calidad (`condition: service_completed_successfully`), garantizando que la API y el cliente solo inicien si todas las pruebas pasan.
+*(Los archivos Dockerfile, Dockerfile.tests, nginx.conf y docker-compose.yml ya están incluidos y configurados).*

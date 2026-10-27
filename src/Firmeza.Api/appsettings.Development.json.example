@@ -6,7 +6,7 @@
     }
   },
   "ConnectionStrings": {
-    "DefaultConnection": "Host=aws-0-us-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.<TU_TENANT_REF>;Password=<TU_PASSWORD>;SSL Mode=Require;Trust Server Certificate=true"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=firmeza_db;Username=postgres;Password=postgres"
   },
   "Jwt": {
     "Key": "FirmezaDevelopmentSecretKeyForJwtTokenGeneration2026!",
